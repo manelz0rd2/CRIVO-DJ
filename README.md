@@ -83,35 +83,18 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 
 ## Recursos
 
-- MP3, WAV, FLAC, AIFF/AIF, M4A, AAC, OGG e WMA, com formatos editáveis;
-- aliases de gênero e prioridades de fallback editáveis;
-- metadata ausente separada em `_SEM GENERO`, `_SEM DATA` e `_SEM BPM`, mantida na raiz, resolvida por prioridade ou ignorada;
-- exceções de pastas e extensões;
-- duplicatas por nome, nome + tamanho, hash SHA-256 ou metadata semelhante;
-- conflitos: pular, substituir, manter ambos com `(2)` ou comparar hash;
-- auditoria de título, artista, gênero, BPM, tonalidade, corrupção e qualidade;
-- BPM lido da tag, da propriedade nomeada do Windows, de comentários compatíveis ou do nome do arquivo; campo vazio significa que o valor não foi gravado na faixa;
-- bitrate, sample rate, bit depth e codec, com destaque de qualidade suspeita;
-- mapa de bitrate por amostragem de frames MP3, com mínimo, máximo, média e modo CBR/VBR;
-- relatório CSV depois da execução e dry-run em CSV ou JSON antes dela;
-- histórico com contagens e desfazer de qualquer execução preservada;
-- busca por track, filtro de metadata faltando e edição antes de aplicar;
-- faixas de BPM, normalização de nomes e termos removidos configuráveis;
-- proteção de nomes reservados, caracteres inválidos e caminhos longos;
-- pastas favoritas, arrastar e soltar e monitoramento de novas músicas;
-- importar/exportar todas as regras em JSON;
-- logs simples ou detalhados;
-- painel inicial/auditoria;
-- enriquecimento online com MusicBrainz, cache local, confiança e revisão;
-- identificação opcional por fingerprint AcoustID, sem envio do áudio;
-- gravação opcional das tags aprovadas, com histórico e undo;
-- destino de download selecionável e persistente; **Organizar concluídos** envia essa pasta diretamente ao core;
-- integração direta com o banco do Rekordbox por Pyrekordbox e SQLCipher, além de XML/M3U8 como formatos auxiliares;
-- funcionamento portátil e sem instalação no Windows PowerShell 5.1; preferências, relatórios, histórico, cache e backups ficam em `%LOCALAPPDATA%\CRIVO DJ`;
-- verificação do ambiente e exportação de diagnóstico sem caminhos pessoais, links privados ou chaves;
-- auditoria informa em quais playlists e pastas de playlists do Rekordbox cada track aparece.
-
-O monitoramento apenas detecta novas músicas e recalcula o plano. Ele nunca organiza automaticamente.
+- baixa tracks individuais ou playlists do YouTube, SoundCloud e Spotify;
+- separa playlists em tracks e mostra capa, artista, duração e progresso de cada música;
+- organiza MP3, WAV, FLAC, AIFF, M4A e outros formatos em pastas por data, gênero e BPM;
+- mostra uma prévia completa antes de copiar, mover ou renomear qualquer arquivo;
+- encontra dados faltantes e permite editar título, artista, álbum, gênero e ano antes da organização;
+- busca sugestões de dados online, sempre deixando a aprovação com o usuário;
+- identifica tracks repetidas e permite escolher o que fazer quando encontra arquivos com o mesmo nome ou conteúdo;
+- cria ou atualiza uma playlist diretamente no Rekordbox com as músicas organizadas;
+- audita a biblioteca do Rekordbox e pendrives para encontrar arquivos ausentes, qualidade suspeita, dados incompletos, análises ausentes e duplicatas;
+- mostra em quais playlists do Rekordbox cada track aparece;
+- exporta relatórios, mantém histórico e permite desfazer organizações preservadas;
+- funciona de forma portátil no Windows, sem instalação e sem exigir permissão de administrador.
 
 ## Baixar músicas e usar o Rekordbox
 
