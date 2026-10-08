@@ -105,17 +105,19 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 - relatórios em CSV e JSON, logs em modo simples ou detalhado e exportação de diagnóstico sanitizado;
 - testes automatizados de regressão, interface, stress, auditoria em runtime e escrita do Rekordbox em banco sandbox.
 
-## Baixar músicas e usar o Rekordbox
+## Do link até o Rekordbox
 
-O CRIVO DJ possui uma fila interna baseada no yt-dlp. Links podem ser arrastados diretamente para o grid ou colados no campo. Ao adicionar, o app consulta título, artista, capa e, quando necessário, separa a playlist em tracks; o download do áudio só começa após **Iniciar download**. Cada linha pode ser marcada ou desmarcada. Antes de baixar, o campo **Salvar tracks em** permite escolher qualquer pasta e guarda essa escolha para o próximo uso. O áudio é processado pelo FFmpeg, recebe a metadata disponibilizada pela fonte e é salvo como MP3 320 kbps; **Organizar concluídos** leva essa pasta ao core do CRIVO DJ. Converter uma fonte de baixa qualidade para 320 kbps não recupera informação perdida. Use o recurso apenas em conteúdos que você tenha autorização para baixar.
+O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
 
-Links de faixa, álbum ou playlist do Spotify são analisados pelo spotDL e expandidos em uma linha por track. O CRIVO DJ usa somente a metadata do Spotify e monta uma busca individual em fonte externa; ele não extrai o stream de áudio do Spotify. A resolução ocorre em segundo plano e no máximo duas tracks são baixadas ao mesmo tempo.
+Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo — ou simplesmente arraste o link para o grid. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
 
-A fila de download apresenta cada link como uma faixa, com capa, título detectado, fonte, duração, barra de progresso, detalhe da transferência e status. A aba Baixar não consulta a coleção do Rekordbox; duplicidades da biblioteca são tratadas pela Auditoria. Se a faixa já estiver no destino, ela é reconhecida como concluída. Falhas reais permanecem na fila com a causa apresentada na própria linha e não encerram o aplicativo.
+Depois do download, **Organizar concluídos** leva as músicas diretamente para a próxima etapa. Ali você escolhe como as pastas ficarão, confere os nomes finais e pode corrigir dados faltantes antes de aplicar qualquer mudança. O padrão seguro copia os arquivos e mantém os originais preservados.
 
-No menu lateral de **Organizar**, a opção **Gravar playlist diretamente no Rekordbox** libera o campo de nome da playlist. O botão **Escolher**, logo abaixo, permite indicar e memorizar o `rekordbox.exe`. Ao terminar a organização, o CRIVO DJ exige que `rekordbox.exe` e `rekordboxAgent.exe` estejam fechados, cria um backup datado do banco, abre o `master.db` criptografado por SQLCipher, cria ou atualiza a playlist, inclui na coleção as tracks ainda inexistentes, grava tudo em uma transação e reabre o banco para verificar o resultado. Se qualquer etapa falhar, o backup é restaurado automaticamente. O XML e a M3U8 continuam sendo gerados como formatos auxiliares de recuperação.
+Se a opção **Gravar playlist diretamente no Rekordbox** estiver marcada, o CRIVO cria ou atualiza a playlist escolhida e registra nela as tracks organizadas. Antes de escrever, o programa exige que o Rekordbox esteja fechado, cria um backup e verifica o resultado. Os arquivos de áudio continuam na pasta organizada; o Rekordbox recebe a referência correta para cada um.
 
-Na aba **Auditoria**, o Pyrekordbox lê diretamente o `master.db`, cuja localização é detectada automaticamente. Uma pasta, biblioteca ou HD pode ser escolhida opcionalmente para comparação. O painel resume coleção, problemas, arquivos ausentes e tracks locais fora da coleção; a tabela mostra também todas as playlists e pastas de playlists às quais cada track pertence. Ela pode ser pesquisada e filtrada por tipo de diagnóstico, inclusive ausência de arquivos ANLZ de waveform/beatgrid. As tracks locais ainda desconhecidas pelo Rekordbox podem ser enviadas para uma playlist de resgate por uma gravação transacional com backup e verificação. O resultado informa quantas já preservaram análise e quantas precisam passar pelo comando **Analyze Track** do Rekordbox. O relatório completo continua exportável em CSV ou JSON.
+O Rekordbox continua responsável pela análise final de waveform, beatgrid, BPM e tonalidade, além da exportação para pendrives e equipamentos.
+
+> No Spotify, o CRIVO usa os dados da track para localizar uma fonte externa compatível; ele não extrai o áudio do streaming. Baixe apenas conteúdos que você tenha autorização para usar.
 
 ## Buscar dados ausentes
 
