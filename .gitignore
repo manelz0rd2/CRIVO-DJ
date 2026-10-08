@@ -10,6 +10,7 @@ Reports/
 *.tmp
 *.bak
 *.zip
+docs/media/reel-frames/
 
 # Configurações e bancos locais
 Config/settings.local.json
@@ -46,4 +47,3 @@ lib/Chromaprint/*.exe
 .DS_Store
 Thumbs.db
 desktop.ini
-
