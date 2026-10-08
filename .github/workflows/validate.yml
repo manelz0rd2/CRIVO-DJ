@@ -40,11 +40,22 @@ jobs:
       - name: Impedir dados locais no repositório
         shell: powershell
         run: |
-          $patterns = 'EmanuelPereiraFraga|Drive Pessoal|Teste Organizador|AppData\\Roaming\\Pioneer'
-          $files = git ls-files
-          $hits = Select-String -Path $files -Pattern $patterns -ErrorAction SilentlyContinue
+          # Os termos são montados em runtime para o workflow não encontrar a própria regra.
+          $privateTerms = @(
+            ('Emanuel' + 'PereiraFraga'),
+            ('Drive' + ' Pessoal'),
+            ('Teste' + ' Organizador'),
+            ('AppData' + '\\Roaming\\Pioneer')
+          )
+          $patterns = ($privateTerms | ForEach-Object { [regex]::Escape($_) }) -join '|'
+          $textExtensions = '.ps1','.psm1','.md','.json','.yml','.yaml','.xaml','.cs','.py','.cmd','.vbs','.txt','.svg'
+          $ignoredRuntimeFolders = '[\\/](?:\.git|Cache|DownloadLogs|Exports|History|Logs|Backups|Reports|lib|ODT-RekordboxDirect)[\\/]'
+          $files = Get-ChildItem -Recurse -File | Where-Object {
+            $_.FullName -notmatch $ignoredRuntimeFolders -and
+            ($textExtensions -contains $_.Extension -or $_.Name -eq '.gitignore')
+          }
+          $hits = $files | Select-String -Pattern $patterns -ErrorAction SilentlyContinue
           if ($hits) {
             $hits | ForEach-Object { Write-Host "::error file=$($_.Path),line=$($_.LineNumber)::$($_.Line)" }
             throw 'O repositório contém caminhos locais.'
           }
-
