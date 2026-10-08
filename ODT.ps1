@@ -1450,6 +1450,28 @@ if($MarketingScreenshots){
     $RekordboxXmlText.Text='Biblioteca do Rekordbox detectada • modo somente leitura'
     $RekordboxSummaryText.Text='Escaneamento concluído. Filtre os diagnósticos e revise apenas o que precisa de atenção.'
     $RekordboxAuditGrid.ItemsSource=$demoAudit
+    # No material de divulgação, prioriza o diagnóstico em vez de exigir rolagem horizontal.
+    $marketingAuditColumns=@{}
+    foreach($column in $RekordboxAuditGrid.Columns){
+        $marketingAuditColumns[[string]$column.Header]=$column
+        $column.Visibility=[Windows.Visibility]::Collapsed
+    }
+    $marketingAuditLayout=@(
+        @{Header='TRACK';Width=220},
+        @{Header='ARTISTA';Width=150},
+        @{Header='PROBLEMA';Width=155},
+        @{Header='DIAGNÓSTICO';Width=290},
+        @{Header='PLAYLIST(S)';Width=230},
+        @{Header='FORMATO';Width=75},
+        @{Header='BITRATE';Width=75}
+    )
+    for($columnIndex=0;$columnIndex -lt $marketingAuditLayout.Count;$columnIndex++){
+        $spec=$marketingAuditLayout[$columnIndex]
+        $column=$marketingAuditColumns[$spec.Header]
+        $column.Visibility=[Windows.Visibility]::Visible
+        $column.DisplayIndex=$columnIndex
+        $column.Width=[Windows.Controls.DataGridLength]::new([double]$spec.Width)
+    }
     $AuditCollectionCount.Text='2.438';$AuditMissingCount.Text='7';$AuditQualityCount.Text='14';$AuditDataCount.Text='32';$AuditDuplicateCount.Text='9'
     $AuditFilterCombo.SelectedIndex=0;$ExportRekordboxAuditButton.IsEnabled=$true
     $AuditReadOnlyText.Text='A verificação é somente leitura. Nenhuma alteração é aplicada automaticamente.'
