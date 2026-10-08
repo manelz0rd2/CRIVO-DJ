@@ -1,0 +1,135 @@
+{
+    "AudioExtensions":  [
+                            ".mp3",
+                            ".wav",
+                            ".flac",
+                            ".aiff",
+                            ".aif",
+                            ".m4a",
+                            ".aac",
+                            ".ogg",
+                            ".wma"
+                        ],
+    "ExcludedExtensions":  [
+
+                           ],
+    "ExcludedFolders":  [
+                            "Pesquisa Organizada",
+                            "_BACKUP",
+                            "Rekordbox",
+                            "Samples"
+                        ],
+    "Favorites":  [
+
+                  ],
+    "DuplicateLevel":  "NameSize",
+    "MissingMetadataPolicy":  "Separate",
+    "GenreFallbackPriority":  [
+                                  "Metadata",
+                                  "SourceFolder",
+                                  "_PENDENTE"
+                              ],
+    "UnknownValues":  {
+                          "Genre":  "_SEM GENERO",
+                          "Date":  "_SEM DATA",
+                          "Bpm":  "_SEM BPM",
+                          "Artist":  "_SEM ARTISTA",
+                          "Key":  "_SEM TONALIDADE"
+                      },
+    "GenreAliases":  {
+                         "UKG":  "UK Garage",
+                         "UK GARAGE":  "UK Garage",
+                         "2-STEP":  "UK Garage",
+                         "2 STEP":  "UK Garage",
+                         "2-STEP GARAGE":  "UK Garage",
+                         "HOUSE / DEEP":  "Deep House",
+                         "DEEP HOUSE":  "Deep House",
+                         "TECH HOUSE":  "Tech House",
+                         "DRUM \u0026 BASS":  "Drum and Bass",
+                         "DNB":  "Drum and Bass"
+                     },
+    "BpmRanges":  [
+                      {
+                          "Min":  0,
+                          "Max":  89,
+                          "Name":  "000-089 BPM"
+                      },
+                      {
+                          "Min":  90,
+                          "Max":  99,
+                          "Name":  "090-099 BPM"
+                      },
+                      {
+                          "Min":  100,
+                          "Max":  109,
+                          "Name":  "100-109 BPM"
+                      },
+                      {
+                          "Min":  110,
+                          "Max":  119,
+                          "Name":  "110-119 BPM"
+                      },
+                      {
+                          "Min":  120,
+                          "Max":  124,
+                          "Name":  "120-124 BPM"
+                      },
+                      {
+                          "Min":  125,
+                          "Max":  129,
+                          "Name":  "125-129 BPM"
+                      },
+                      {
+                          "Min":  130,
+                          "Max":  134,
+                          "Name":  "130-134 BPM"
+                      },
+                      {
+                          "Min":  135,
+                          "Max":  139,
+                          "Name":  "135-139 BPM"
+                      },
+                      {
+                          "Min":  140,
+                          "Max":  999,
+                          "Name":  "140+ BPM"
+                      }
+                  ],
+    "Quality":  {
+                    "MinimumMp3Bitrate":  256,
+                    "MinimumSampleRate":  44100
+                },
+    "NameRules":  {
+                      "ReplaceUnderscores":  true,
+                      "TitleCase":  true,
+                      "RemoveRepeatedText":  true,
+                      "RemoveTerms":  [
+                                          "320kbps",
+                                          "FREE DOWNLOAD",
+                                          "Official Audio"
+                                      ]
+                  },
+    "LogLevel":  "Detailed",
+    "WatchFolderEnabled":  false,
+    "InternetMetadata":  {
+                             "Enabled":  true,
+                             "Provider":  "MusicBrainz",
+                             "FillOnlyEmpty":  true,
+                             "MinimumConfidence":  90,
+                             "AcoustIdClientKey":  "",
+                             "WriteApprovedTags":  false,
+                             "CacheDays":  30
+                         },
+    "Acquisition":  {
+                        "InboxPath":  "%USERPROFILE%\\Music\\CRIVO DJ\\Inbox",
+                        "DownloadPath":  "%USERPROFILE%\\Music\\CRIVO DJ\\Downloads",
+                        "DownloaderPath":  "Tools\\yt-dlp.exe",
+                        "SpotifyResolverPath":  "Tools\\spotdl.exe",
+                        "FFmpegPath":  "Tools\\ffmpeg.exe",
+                        "DefaultQuality":  "320",
+                        "KeepSource":  true
+                    },
+    "Rekordbox":  {
+                      "ExecutablePath":  ""
+                  }
+}

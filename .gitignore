@@ -1,0 +1,49 @@
+# Dados locais e artefatos de execução
+Cache/
+DownloadLogs/
+Exports/
+History/
+Logs/
+Backups/
+Reports/
+*.log
+*.tmp
+*.bak
+*.zip
+
+# Configurações e bancos locais
+Config/settings.local.json
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python / build
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+*.spec
+
+# Dependências binárias distribuídas apenas nas Releases
+Tools/ffmpeg.exe
+Tools/yt-dlp.exe
+Tools/spotdl.exe
+Tools/ODT-RekordboxDirect/
+lib/*.dll
+lib/Chromaprint/*.exe
+
+# Ambiente e editores
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+

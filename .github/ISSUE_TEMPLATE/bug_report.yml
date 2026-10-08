@@ -1,0 +1,68 @@
+name: Relatar um problema
+description: Conte o que aconteceu para conseguirmos reproduzir e corrigir.
+title: "[Bug]: "
+labels: ["bug", "triagem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por testar o CRIVO DJ. Não envie bancos do Rekordbox, músicas, chaves, cookies ou links privados.
+  - type: input
+    id: version
+    attributes:
+      label: Versão do CRIVO DJ
+      placeholder: 0.9.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Baixar
+        - Organizar
+        - Auditoria
+        - Rekordbox
+        - Interface
+        - Inicialização/portabilidade
+        - Outra
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      description: Liste os passos mínimos, sem dados privados.
+      placeholder: |
+        1. Abri a aba...
+        2. Adicionei...
+        3. Cliquei em...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que deveria acontecer?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: O que aconteceu?
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Versão do Windows
+      placeholder: Windows 11 24H2
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações
+      options:
+        - label: Testei na versão mais recente disponível.
+          required: true
+        - label: Conferi que o material enviado não contém dados privados.
+          required: true
+

@@ -1,0 +1,34 @@
+name: Sugerir uma melhoria
+description: Proponha uma melhoria concreta para o workflow de DJs.
+title: "[Ideia]: "
+labels: ["melhoria"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qual problema isso resolve?
+      description: Descreva o trabalho que hoje é lento, confuso ou inseguro.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Como você imagina a solução?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área principal
+      options:
+        - Baixar
+        - Organizar
+        - Auditoria
+        - Rekordbox
+        - Interface
+        - Outra
+

@@ -1,0 +1,735 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="CRIVO DJ por MANEL Z0RD" Width="1280" Height="840" MinWidth="1120" MinHeight="720" AllowDrop="True" WindowStartupLocation="CenterScreen" WindowStyle="SingleBorderWindow" ResizeMode="CanResize" Background="#B4B0A8" Foreground="#171613" FontFamily="Segoe UI" UseLayoutRounding="True">
+  <Window.Resources>
+    <!-- Paleta CRIVO: liga quente, papel mineral, tinta e preto de referência. -->
+    <SolidColorBrush x:Key="Chassis" Color="#B4B0A8" />
+    <SolidColorBrush x:Key="PanelBrush" Color="#CAC6BD" />
+    <SolidColorBrush x:Key="VisorBrush" Color="#E1DED6" />
+    <SolidColorBrush x:Key="Accent" Color="#171613" />
+    <SolidColorBrush x:Key="Blue" Color="#171613" />
+    <SolidColorBrush x:Key="Purple" Color="#45423D" />
+    <SolidColorBrush x:Key="Muted" Color="#57534C" />
+    <SolidColorBrush x:Key="Line" Color="#777269" />
+    <SolidColorBrush x:Key="Success" Color="#39715F" />
+    <SolidColorBrush x:Key="Warning" Color="#4F4B44" />
+    <DropShadowEffect x:Key="AccentGlow" Color="#171613" BlurRadius="2" ShadowDepth="0" Opacity="0.10" />
+    <DropShadowEffect x:Key="BlueGlow" Color="#171613" BlurRadius="2" ShadowDepth="0" Opacity="0.10" />
+    <Style TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="#C5C1B8" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#6F6A62" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="11,6" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Body" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Body" Property="Opacity" Value="0.86" />
+                <Setter TargetName="Body" Property="BorderBrush" Value="#24221F" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Body" Property="Opacity" Value="0.70" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Body" Property="Opacity" Value="0.38" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#24221F" />
+      <Setter Property="Foreground" Value="#F2F0EA" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="#D0CCC3" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="Foreground" Value="#171613" />
+    </Style>
+    <Style x:Key="ChromeButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Width" Value="30" />
+      <Setter Property="Height" Value="25" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="4,0,0,0" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#EEECE6" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="CaretBrush" Value="#171613" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="SelectionBrush" Value="#777269" />
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Background" Value="#EEECE6" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="Padding" Value="7,5" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Background" Value="#EEECE6" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="Padding" Value="7,5" />
+    </Style>
+    <Style TargetType="TabControl">
+      <Setter Property="Background" Value="{StaticResource Chassis}" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style TargetType="TabItem">
+      <Setter Property="Background" Value="#45423D" />
+      <Setter Property="Foreground" Value="#F2F0EA" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="22,9" />
+      <Setter Property="Margin" Value="0,0,3,0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabItem">
+            <Border x:Name="TabBody" Background="{TemplateBinding Background}" BorderBrush="#34312E" BorderThickness="1,1,1,0" Padding="{TemplateBinding Padding}">
+              <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="TabBody" Property="Background" Value="#171613" />
+                <Setter TargetName="TabBody" Property="BorderBrush" Value="#24221F" />
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="TabBody" Property="Background" Value="#2D2B27" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Margin" Value="0,0,0,11" />
+    </Style>
+    <Style TargetType="DataGrid">
+      <Setter Property="Background" Value="#D0CCC3" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="RowBackground" Value="#DEDBD3" />
+      <Setter Property="AlternatingRowBackground" Value="#D3CFC6" />
+      <Setter Property="GridLinesVisibility" Value="Horizontal" />
+      <Setter Property="HorizontalGridLinesBrush" Value="#A29D94" />
+      <Setter Property="AutoGenerateColumns" Value="False" />
+      <Setter Property="HeadersVisibility" Value="Column" />
+      <Setter Property="RowHeight" Value="29" />
+    </Style>
+    <Style TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#AAA69E" />
+      <Setter Property="Foreground" Value="#171613" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="Padding" Value="9" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style TargetType="DataGridRow">
+      <Setter Property="Foreground" Value="#171613" />
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="#8E8A82" />
+          <Setter Property="Foreground" Value="#171613" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="Panel" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="1" />
+      <Setter Property="Padding" Value="15" />
+    </Style>
+    <Style x:Key="Counter" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource VisorBrush}" />
+      <Setter Property="BorderBrush" Value="#777269" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="1" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+  </Window.Resources>
+  <!-- Sem animações ou moldura proprietária: a janela usa o comportamento nativo do Windows. -->
+  <Border x:Name="RootShell" Margin="0" CornerRadius="0" Background="{StaticResource Chassis}" BorderThickness="0">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="0" />
+        <RowDefinition Height="34" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="34" />
+      </Grid.RowDefinitions>
+      <Border x:Name="TitleBar" Grid.Row="0" Visibility="Collapsed" BorderThickness="0" Background="#111214">
+        <Grid Margin="17,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="38" Height="28" Background="#050505" BorderBrush="#26282B" BorderThickness="1">
+              <TextBlock Text="C" Foreground="#F1F3F5" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Margin="10,0,0,0">
+              <TextBlock Text="CRIVO DJ" Foreground="#F2F0EA" FontSize="17" FontWeight="Bold" />
+              <TextBlock Text="CURADORIA E ORGANIZAÇÃO DE TRACKS" Foreground="#777269" FontSize="9" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Height="32" Margin="0,0,16,8">
+            <Rectangle x:Name="Eq1" Width="4" Height="8" Fill="#34322F" Margin="2,0" RadiusX="2" />
+            <Rectangle x:Name="Eq2" Width="4" Height="14" Fill="#2E2C29" Margin="2,0" RadiusX="2" />
+            <Rectangle x:Name="Eq3" Width="4" Height="19" Fill="#282623" Margin="2,0" RadiusX="2" />
+            <Rectangle x:Name="Eq4" Width="4" Height="11" Fill="#34322F" Margin="2,0" RadiusX="2" />
+            <Rectangle x:Name="Eq5" Width="4" Height="23" Fill="#57534C" Margin="2,0" RadiusX="2" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button x:Name="MinimizeButton" Content="—" Style="{StaticResource ChromeButton}" />
+            <Button x:Name="CloseButton" Content="×" Style="{StaticResource ChromeButton}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border Grid.Row="1" Background="#A7A299" BorderBrush="#6F6A62" BorderThickness="0,0,0,1">
+        <Grid Margin="17,0">
+          <TextBlock Text="CRIVO DJ" Foreground="#171613" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+      <TabControl x:Name="MainTabs" Grid.Row="2" Margin="10,0,10,12">
+        <TabItem Header="BAIXAR">
+          <Grid Margin="18">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="94" />
+              <RowDefinition Height="48" />
+              <RowDefinition Height="55" />
+              <RowDefinition />
+              <RowDefinition Height="48" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="BAIXAR TRACKS" FontSize="18" FontWeight="Bold" Foreground="#171613" />
+              <TextBlock Text="Cole ou digite o link no campo, ou arraste-o para a lista de músicas abaixo." Foreground="#57534C" Margin="0,3,0,0" />
+              <TextBlock Text="YouTube, SoundCloud e Spotify  •  tracks individuais ou playlists" Foreground="#34312E" FontSize="10" FontWeight="SemiBold" Margin="0,3,0,0" />
+            </StackPanel>
+            <Border Grid.Row="1" Background="#E1DED6" BorderBrush="#171613" BorderThickness="3,1,1,1" Margin="0,10,0,7" Padding="10" x:Name="DownloadDropPanel">
+              <StackPanel>
+                <TextBlock Text="COLE OU DIGITE O LINK NO CAMPO — OU ARRASTE PARA A LISTA DE MÚSICAS ABAIXO" Foreground="#171613" FontSize="11" FontWeight="Bold" />
+                <Grid Margin="0,6,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="175" />
+                  </Grid.ColumnDefinitions>
+                  <TextBox x:Name="DownloadUrlText" TextWrapping="NoWrap" Height="30" VerticalContentAlignment="Center" ToolTip="Um ou mais links. Adicionar ao grid não inicia o download." />
+                  <Button x:Name="AddDownloadLinkButton" Grid.Column="1" Content="ADICIONAR" Style="{StaticResource PrimaryButton}" Height="32" Padding="8,2" Margin="7,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </Border>
+            <Grid Grid.Row="2" Margin="0,2,0,2">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="118" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="150" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="SALVAR TRACKS EM" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBox x:Name="DownloadDestinationText" Grid.Column="1" IsReadOnly="True" Margin="0,4,8,4" VerticalContentAlignment="Center" />
+              <Button x:Name="ChooseDownloadDestinationButton" Grid.Column="2" Content="ESCOLHER PASTA" Margin="0,4,0,4" />
+            </Grid>
+            <Grid Grid.Row="3">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="155" />
+                <ColumnDefinition Width="150" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="SAÍDA FIXA: MP3 320 KBPS" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="Os downloads concluídos ficam prontos para organizar." Foreground="#57534C" VerticalAlignment="Center" />
+              <Button x:Name="RemoveDownloadButton" Grid.Column="2" Content="REMOVER" Margin="0,4,8,4" ToolTip="Remove as linhas destacadas no grid." />
+              <Button x:Name="ClearDownloadsButton" Grid.Column="3" Content="LIMPAR CONCLUÍDOS" Margin="0,4,8,4" />
+              <Button x:Name="StartDownloadButton" Grid.Column="4" Content="INICIAR DOWNLOAD" Style="{StaticResource PrimaryButton}" Margin="0,4,0,4" />
+            </Grid>
+            <Border Grid.Row="4" Background="#D0CCC3" BorderBrush="#777269" BorderThickness="1">
+              <DataGrid x:Name="DownloadQueueGrid" IsReadOnly="False" AllowDrop="True" AlternationCount="2" RowHeight="68" GridLinesVisibility="Horizontal" SelectionMode="Extended" SelectionUnit="FullRow">
+                <DataGrid.Columns>
+                  <DataGridTemplateColumn Header="✓" Width="38">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="" Width="54">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <Border Width="44" Height="44" Background="#171613" BorderBrush="#24221F" BorderThickness="1" HorizontalAlignment="Center" ClipToBounds="True">
+                          <Grid>
+                            <TextBlock Text="♫" Foreground="#F2F0EA" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="FAIXA / LINK" Width="2.6*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Url}" Foreground="#625E57" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="FONTE" Width="1*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Source}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Duration}" Foreground="#625E57" FontSize="10" Margin="0,4,0,0" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="PROGRESSO" Width="1.4*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <StackPanel VerticalAlignment="Center">
+                          <Grid>
+                            <ProgressBar Height="15" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Background="#929292" Foreground="#171613" />
+                            <TextBlock Text="{Binding Progress}" HorizontalAlignment="Center" FontSize="10" FontWeight="Bold" />
+                          </Grid>
+                          <TextBlock Text="{Binding Detail}" Foreground="#625E57" FontSize="9" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="105" IsReadOnly="True" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+            <Grid Grid.Row="5" Margin="0,9,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="210" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="DownloadStatusText" Text="Fila pronta para receber links." Foreground="#45413B" VerticalAlignment="Center" />
+              <Button x:Name="ImportInboxButton" Grid.Column="1" Content="ORGANIZAR CONCLUÍDOS" />
+            </Grid>
+          </Grid>
+        </TabItem>
+        <TabItem Header="ORGANIZAR">
+          <Grid Margin="7,7,7,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="370" />
+              <ColumnDefinition Width="14" />
+              <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                  <StackPanel>
+                    <TextBlock Text="DIRETÓRIO DE ORIGEM" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                    <TextBlock Text="Escolha a pasta que contém as tracks a revisar." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,0" />
+                    <TextBox x:Name="SourceText" IsReadOnly="True" Text="Nenhuma pasta selecionada" Margin="0,10,0,8" />
+                    <Button x:Name="ChooseFolderButton" Content="ESCOLHER PASTA" Style="{StaticResource AccentButton}" />
+                  </StackPanel>
+                </Border>
+                <StackPanel x:Name="ConfigPanel" IsEnabled="False" Opacity="0.42">
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                    <StackPanel>
+                      <TextBlock Text="01 / ORGANIZAR POR" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                      <TextBlock Text="Define quais informações formarão as novas pastas." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,10" />
+                      <RadioButton x:Name="ModeDate" Content="Data" />
+                      <RadioButton x:Name="ModeGenre" Content="Gênero" />
+                      <RadioButton x:Name="ModeDateGenre" Content="Data + Gênero" IsChecked="True" />
+                      <RadioButton x:Name="ModeGenreBpm" Content="Gênero + BPM" Margin="0" />
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                    <StackPanel>
+                      <TextBlock Text="02 / COMO FICARÁ A PASTA" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                      <TextBlock Text="Prévia do nome e da estrutura que serão criados." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,9" />
+                      <TextBox x:Name="FolderPatternText" Text="{}{AAAA} - {MES_NUM} - {MES} - {GENERO}" IsReadOnly="True" FontFamily="Segoe UI" />
+                      <CheckBox x:Name="CustomizeFolderCheck" Content="Personalizar nome e estrutura" Margin="0,10,0,0" />
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                    <StackPanel>
+                      <TextBlock Text="03 / DESTINO DA ORGANIZAÇÃO" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                      <TextBlock Text="Copiar é o padrão seguro; os arquivos originais permanecem no lugar." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,10" />
+                      <RadioButton x:Name="DestinationSame" Content="No próprio diretório" />
+                      <TextBlock Text="Cria a pasta Pesquisa Organizada na origem." Foreground="{StaticResource Muted}" FontSize="11" Margin="22,-7,0,11" />
+                      <RadioButton x:Name="DestinationOther" Content="Em outro diretório" />
+                      <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="40" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="DestinationText" IsReadOnly="True" Text="Escolha onde salvar a organização" />
+                        <Button x:Name="ChooseDestinationButton" Grid.Column="1" Content="…" Margin="6,0,0,0" Padding="4" IsEnabled="False" />
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                    <StackPanel>
+                      <TextBlock Text="04 / REKORDBOX" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                      <TextBlock Text="Opcional. Cria a playlist diretamente com backup e verificação." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,9" />
+                      <CheckBox x:Name="SendRekordboxCheck" Content="Gravar playlist diretamente no Rekordbox" ToolTip="O Rekordbox precisa estar totalmente fechado. O CRIVO DJ cria um backup antes de alterar o banco." />
+                      <TextBlock Text="Nome da playlist" Foreground="{StaticResource Muted}" FontSize="11" />
+                      <TextBox x:Name="OrganizerPlaylistNameText" Text="CRIVO DJ — Organizado" Margin="0,4,0,0" IsEnabled="False" ToolTip="Preenchido automaticamente com o nome da pasta escolhida; você pode editar antes de organizar." />
+                      <TextBlock Text="Executável do Rekordbox" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,9,0,0" />
+                      <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="86" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="RekordboxExeText" IsReadOnly="True" Text="Localizar automaticamente" VerticalContentAlignment="Center" />
+                        <Button x:Name="ChooseRekordboxExeButton" Grid.Column="1" Content="ESCOLHER" Margin="6,0,0,0" Padding="4" />
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                    <StackPanel>
+                      <TextBlock Text="05 / REGRAS E SEGURANÇA" Foreground="#171717" FontSize="12" FontWeight="Bold" />
+                      <TextBlock Text="Proteções conferidas antes de copiar, mover ou renomear qualquer track." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,10" />
+                      <CheckBox x:Name="RenameFilesCheck" Content="Renomear arquivos" IsChecked="True" />
+                      <CheckBox x:Name="DetectDuplicatesCheck" Content="Verificar tracks repetidas" IsChecked="True" ToolTip="Compara tracks inclusive entre subpastas. Pode encontrar o mesmo áudio mesmo quando os nomes são diferentes." />
+                      <CheckBox x:Name="OnlyAudioCheck" Content="Somente tracks de áudio" IsChecked="True" />
+                      <CheckBox x:Name="CreateReportCheck" Content="Criar relatório CSV" />
+                      <CheckBox x:Name="CreateRestoreCheck" Content="Criar ponto de restauração" IsChecked="True" />
+                      <TextBlock x:Name="EnvironmentStatusText" Text="AMBIENTE AINDA NÃO VERIFICADO" Foreground="#57534C" FontSize="9" FontWeight="SemiBold" Margin="0,9,0,4" />
+                      <UniformGrid Columns="2">
+                        <Button x:Name="SystemCheckButton" Content="VERIFICAR AMBIENTE" Margin="0,0,4,0" Padding="5" />
+                        <Button x:Name="ExportDiagnosticButton" Content="EXPORTAR DIAGNÓSTICO" Margin="4,0,0,0" Padding="5" />
+                      </UniformGrid>
+                    </StackPanel>
+                  </Border>
+                  <Expander Header="OPÇÕES AVANÇADAS" Visibility="Collapsed" Foreground="#57534C" Background="#111214" BorderBrush="#303238" BorderThickness="1" Padding="13">
+                    <StackPanel Margin="0,11,0,0">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="8" />
+                          <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <TextBlock Text="Ação" Foreground="{StaticResource Muted}" />
+                          <ComboBox x:Name="ActionCombo" Margin="0,4,0,0">
+                            <ComboBoxItem Content="Copiar" Tag="Copy" IsSelected="True" />
+                            <ComboBoxItem Content="Mover" Tag="Move" />
+                          </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                          <TextBlock Text="Conflitos" Foreground="{StaticResource Muted}" />
+                          <ComboBox x:Name="ConflictCombo" Margin="0,4,0,0">
+                            <ComboBoxItem Content="Manter ambos" Tag="Rename" IsSelected="True" />
+                            <ComboBoxItem Content="Comparar hash" Tag="CompareHash" />
+                            <ComboBoxItem Content="Pular" Tag="Skip" />
+                            <ComboBoxItem Content="Substituir" Tag="Replace" />
+                          </ComboBox>
+                        </StackPanel>
+                      </Grid>
+                      <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="8" />
+                          <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <TextBlock Text="Duplicatas" Foreground="{StaticResource Muted}" />
+                          <ComboBox x:Name="DuplicateLevelCombo" Margin="0,4,0,0">
+                            <ComboBoxItem Content="Nome" Tag="Name" />
+                            <ComboBoxItem Content="Nome + tamanho" Tag="NameSize" IsSelected="True" />
+                            <ComboBoxItem Content="Hash completo" Tag="Hash" />
+                            <ComboBoxItem Content="Metadata semelhante" Tag="Metadata" />
+                          </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                          <TextBlock Text="Metadata ausente" Foreground="{StaticResource Muted}" />
+                          <ComboBox x:Name="MissingPolicyCombo" Margin="0,4,0,0">
+                            <ComboBoxItem Content="Separar em _SEM..." Tag="Separate" IsSelected="True" />
+                            <ComboBoxItem Content="Manter na raiz" Tag="Root" />
+                            <ComboBoxItem Content="Aplicar prioridades" Tag="Priority" />
+                            <ComboBoxItem Content="Ignorar arquivo" Tag="Skip" />
+                          </ComboBox>
+                        </StackPanel>
+                      </Grid>
+                      <TextBlock Text="Data utilizada" Foreground="{StaticResource Muted}" Margin="0,11,0,0" />
+                      <ComboBox x:Name="DateSourceCombo" Margin="0,4,0,0">
+                        <ComboBoxItem Content="Última modificação" Tag="LastWriteTime" IsSelected="True" />
+                        <ComboBoxItem Content="Criação" Tag="CreationTime" />
+                        <ComboBoxItem Content="Ano da metadata" Tag="MetadataYear" />
+                      </ComboBox>
+                      <CheckBox x:Name="WatchFolderCheck" Content="Monitorar novas músicas nesta pasta" Margin="0,11,0,0" />
+                      <UniformGrid Columns="2" Margin="0,4,0,0">
+                        <Button x:Name="RulesButton" Content="REGRAS E FORMATOS" Margin="0,0,4,4" />
+                        <Button x:Name="DryRunButton" Content="EXPORTAR SIMULAÇÃO" Margin="4,0,0,4" />
+                        <Button x:Name="FavoritesButton" Content="PASTAS FAVORITAS" Margin="0,4,4,4" />
+                        <Button x:Name="DashboardButton2" Content="PAINEL INICIAL" Margin="4,4,0,4" />
+                        <Button x:Name="ExportConfigButton" Content="EXPORTAR CONFIG." Margin="0,4,4,0" />
+                        <Button x:Name="ImportConfigButton" Content="IMPORTAR CONFIG." Margin="4,4,0,0" />
+                        <Button x:Name="InboxButton" Content="ABRIR INBOX" Margin="0,4,4,0" />
+                        <Button x:Name="ImportRekordboxButton" Content="IMPORTAR REKORDBOX XML" Margin="4,4,0,0" />
+                        <Button x:Name="ExportRekordboxButton" Content="EXPORTAR REKORDBOX XML" Margin="0,4,4,0" />
+                      </UniformGrid>
+                    </StackPanel>
+                  </Expander>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+            <Grid Grid.Column="2">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="72" />
+                <RowDefinition Height="58" />
+                <RowDefinition />
+                <RowDefinition Height="68" />
+              </Grid.RowDefinitions>
+              <UniformGrid Columns="4">
+                <Border Style="{StaticResource Counter}">
+                  <StackPanel>
+                    <TextBlock Text="TRACKS AO TODO" Foreground="#404040" FontSize="10" />
+                    <TextBlock x:Name="TotalCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
+                  </StackPanel>
+                </Border>
+                <Border x:Name="GenreCounter1" Style="{StaticResource Counter}" Visibility="Collapsed">
+                  <StackPanel>
+                    <TextBlock x:Name="GenreLabel1" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="ReadyCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
+                  </StackPanel>
+                </Border>
+                <Border x:Name="GenreCounter2" Style="{StaticResource Counter}" Visibility="Collapsed">
+                  <StackPanel>
+                    <TextBlock x:Name="GenreLabel2" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="NoGenreCount" Text="000" Foreground="#4F4B44" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
+                  </StackPanel>
+                </Border>
+                <Border x:Name="GenreCounter3" Style="{StaticResource Counter}" Margin="0" Visibility="Collapsed">
+                  <StackPanel>
+                    <TextBlock x:Name="GenreLabel3" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="DuplicateCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+              <Grid Grid.Row="1" Margin="0,5,0,6">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition />
+                  <ColumnDefinition Width="230" />
+                  <ColumnDefinition Width="0" />
+                  <ColumnDefinition Width="180" />
+                </Grid.ColumnDefinitions>
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="17" />
+                    <RowDefinition />
+                  </Grid.RowDefinitions>
+                  <TextBlock Text="BUSCAR TRACK" Foreground="#45413B" FontSize="9" FontWeight="Bold" />
+                  <TextBox x:Name="SearchText" Grid.Row="1" ToolTip="Pesquisar pelo nome ou título da track" />
+                </Grid>
+                <CheckBox x:Name="MetadataMissingCheck" Grid.Column="1" Content="TRACKS COM DADOS FALTANTES" Margin="12,17,0,0" VerticalAlignment="Center" ToolTip="Mostrar somente tracks com título, artista, álbum, gênero, ano, BPM ou tonalidade ausentes" />
+                <Button x:Name="EnrichMetadataButton" Grid.Column="3" Content="BUSCAR DADOS AUSENTES" Height="34" Padding="6,2" Margin="7,17,0,0" FontSize="10" ToolTip="Procura título, artista, álbum, gênero e ano que estiverem vazios. Você revisa antes de aplicar; os arquivos não são alterados automaticamente." />
+              </Grid>
+              <Border Grid.Row="2" CornerRadius="1" BorderBrush="#777269" BorderThickness="1" Background="#D0CCC3" Padding="1">
+                <DataGrid x:Name="PreviewGrid" IsReadOnly="False" AlternationCount="2" BorderThickness="0">
+                  <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="✓" Binding="{Binding Selected}" Width="38" />
+                    <DataGridTextColumn Header="NOME FINAL" Binding="{Binding OutputName}" Width="1.25*" />
+                    <DataGridTextColumn Header="ARTISTA" Binding="{Binding Artist}" Width="*" />
+                    <DataGridTextColumn Header="GÊNERO" Binding="{Binding Genre}" Width="*" />
+                    <DataGridTextColumn Header="DESTINO" Binding="{Binding Destination}" Width="2.1*" />
+                  </DataGrid.Columns>
+                </DataGrid>
+              </Border>
+              <Grid Grid.Row="3" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition />
+                  <ColumnDefinition Width="180" />
+                  <ColumnDefinition Width="210" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock x:Name="PlanSummary" Text="ESCOLHA UMA PASTA PARA COMEÇAR" Foreground="#24221F" FontFamily="Arial" FontSize="12" />
+                  <ProgressBar x:Name="Progress" Height="7" Margin="0,9,18,0" Minimum="0" Maximum="100" Background="#8D887F" Foreground="#171613" />
+                </StackPanel>
+                <Button x:Name="EditTrackMetadataButton" Grid.Column="1" Content="EDITAR DADOS FALTANTES" Margin="7,0,7,0" IsEnabled="False" />
+                <Button x:Name="ApplyButton" Grid.Column="2" Content="ORGANIZAR" Style="{StaticResource PrimaryButton}" FontSize="13" IsEnabled="False" />
+              </Grid>
+            </Grid>
+          </Grid>
+        </TabItem>
+        <TabItem Header="AUDITORIA">
+          <Grid Margin="18">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="96" />
+              <RowDefinition Height="78" />
+              <RowDefinition Height="48" />
+              <RowDefinition />
+              <RowDefinition Height="48" />
+            </Grid.RowDefinitions>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="390" />
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="SAÚDE DA BIBLIOTECA" FontSize="18" FontWeight="Bold" Foreground="#171613" />
+                <TextBlock Text="Encontre arquivos ausentes, tracks suspeitas e problemas do Rekordbox antes de corrigir." Foreground="#57534C" Margin="0,3,0,0" />
+                <TextBlock x:Name="RekordboxSummaryText" Text="Detectando a base do Rekordbox…" Foreground="#45413B" FontSize="10" Margin="0,2,0,0" />
+              </StackPanel>
+              <Grid Grid.Column="1" Height="36" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <Button x:Name="AuditLibraryModeButton" Content="BIBLIOTECA REKORDBOX" Style="{StaticResource PrimaryButton}" Padding="5,1" />
+                <Button x:Name="AuditUsbModeButton" Grid.Column="1" Content="PENDRIVE / DISPOSITIVO" Padding="5,1" />
+              </Grid>
+            </Grid>
+
+            <Border Grid.Row="1" Style="{StaticResource Panel}" Margin="0,10,0,7" Padding="12">
+              <Grid>
+                <Grid x:Name="AuditLibrarySourcePanel">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="135" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="135" />
+                    <ColumnDefinition Width="190" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="BASE DETECTADA" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" />
+                  <TextBox x:Name="RekordboxXmlText" Grid.Column="1" IsReadOnly="True" Text="Detectando master.db..." VerticalContentAlignment="Center" />
+                  <Button x:Name="ChooseRekordboxXmlButton" Grid.Column="2" Content="ESCOLHER OUTRA" Height="38" Padding="6,1" VerticalAlignment="Center" Margin="7,0,7,0" />
+                  <Button x:Name="AuditRekordboxButton" Grid.Column="3" Content="ESCANEAR BIBLIOTECA" Style="{StaticResource PrimaryButton}" Height="38" Padding="6,1" VerticalAlignment="Center" />
+                </Grid>
+                <Grid x:Name="AuditUsbSourcePanel" Visibility="Collapsed">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="175" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="155" />
+                    <ColumnDefinition Width="190" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="PENDRIVE REKORDBOX" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" />
+                  <TextBox x:Name="AuditUsbPathText" Grid.Column="1" IsReadOnly="True" Text="Escolha o pendrive ou dispositivo exportado" VerticalContentAlignment="Center" />
+                  <Button x:Name="ChooseAuditUsbButton" Grid.Column="2" Content="ESCOLHER DISPOSITIVO" Height="38" Padding="6,1" VerticalAlignment="Center" Margin="7,0,7,0" />
+                  <Button x:Name="AuditUsbButton" Grid.Column="3" Content="VERIFICAR PENDRIVE" Style="{StaticResource PrimaryButton}" Height="38" Padding="6,1" VerticalAlignment="Center" />
+                </Grid>
+              </Grid>
+            </Border>
+
+            <UniformGrid Grid.Row="2" Columns="5" Margin="0,0,0,7">
+              <Border Style="{StaticResource Counter}"><StackPanel><TextBlock x:Name="AuditTotalLabel" Text="TRACKS NA COLEÇÃO" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="AuditCollectionCount" Text="—" Foreground="#171613" FontSize="23" FontWeight="Bold"/></StackPanel></Border>
+              <Border Style="{StaticResource Counter}"><StackPanel><TextBlock x:Name="AuditMissingLabel" Text="SEM ARQUIVO FÍSICO" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="AuditMissingCount" Text="—" Foreground="#8F1F1F" FontSize="23" FontWeight="Bold"/></StackPanel></Border>
+              <Border Style="{StaticResource Counter}"><StackPanel><TextBlock x:Name="AuditQualityLabel" Text="QUALIDADE SUSPEITA" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="AuditQualityCount" Text="—" Foreground="#7B5200" FontSize="23" FontWeight="Bold"/></StackPanel></Border>
+              <Border Style="{StaticResource Counter}"><StackPanel><TextBlock x:Name="AuditDataLabel" Text="DADOS / ANÁLISE FALTANTES" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="AuditDataCount" Text="—" Foreground="#7B5200" FontSize="23" FontWeight="Bold"/></StackPanel></Border>
+              <Border Style="{StaticResource Counter}" Margin="0"><StackPanel><TextBlock x:Name="AuditDuplicateLabel" Text="DUPLICATAS / POSSÍVEIS" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="AuditDuplicateCount" Text="—" Foreground="#8F1F1F" FontSize="23" FontWeight="Bold"/></StackPanel></Border>
+            </UniformGrid>
+
+            <Grid Grid.Row="3" Margin="0,0,0,7">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="135" />
+                <ColumnDefinition Width="245" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="PESQUISAR TRACK" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBox x:Name="AuditSearchText" Grid.Column="1" VerticalContentAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="MOSTRAR" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
+              <ComboBox x:Name="AuditFilterCombo" Grid.Column="3">
+                <ComboBoxItem Content="Todos os problemas" Tag="Problems" IsSelected="True" />
+                <ComboBoxItem Content="Tudo, incluindo tracks saudáveis" Tag="All" />
+                <ComboBoxItem Content="Sem arquivo físico" Tag="Missing" />
+                <ComboBoxItem Content="Não verificadas — unidade indisponível" Tag="Unavailable" />
+                <ComboBoxItem Content="Qualidade suspeita" Tag="Quality" />
+                <ComboBoxItem Content="Tracks com dados faltantes" Tag="Metadata" />
+                <ComboBoxItem Content="Sem análise do Rekordbox" Tag="Analysis" />
+                <ComboBoxItem Content="Duplicatas e possíveis" Tag="Duplicates" />
+                <ComboBoxItem Content="Origens dispersas" Tag="Location" />
+                <ComboBoxItem Content="Estrutura do dispositivo" Tag="Structure" />
+              </ComboBox>
+            </Grid>
+
+            <Border Grid.Row="4" Background="#D0CCC3" BorderBrush="#777269" BorderThickness="1">
+              <DataGrid x:Name="RekordboxAuditGrid" IsReadOnly="True" AlternationCount="2" SelectionMode="Extended" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="TRACK" Binding="{Binding Title}" Width="235" />
+                  <DataGridTextColumn Header="ARTISTA" Binding="{Binding Artist}" Width="175" />
+                  <DataGridTextColumn Header="ÁLBUM" Binding="{Binding Album}" Width="165" />
+                  <DataGridTextColumn Header="GÊNERO" Binding="{Binding Genre}" Width="120" />
+                  <DataGridTextColumn Header="ANO" Binding="{Binding Year}" Width="58" />
+                  <DataGridTextColumn Header="BPM" Binding="{Binding Bpm}" Width="62" />
+                  <DataGridTextColumn Header="TONALIDADE" Binding="{Binding Key}" Width="88" />
+                  <DataGridTextColumn Header="FORMATO" Binding="{Binding Codec}" Width="75" />
+                  <DataGridTextColumn Header="BITRATE" Binding="{Binding Bitrate}" Width="72" />
+                  <DataGridTextColumn Header="SAMPLE RATE" Binding="{Binding SampleRate}" Width="95" />
+                  <DataGridTemplateColumn Header="PLAYLIST(S)" Width="220">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding PlaylistDisplay}" ToolTip="{Binding PlaylistDisplay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="ANÁLISE" Binding="{Binding Analysis}" Width="115" />
+                  <DataGridTextColumn Header="PROBLEMA" Binding="{Binding IssueType}" Width="155" />
+                  <DataGridTextColumn Header="DUPLICIDADE" Binding="{Binding DuplicateType}" Width="145" />
+                  <DataGridTextColumn Header="PASTA ORIGEM" Binding="{Binding SourceFolder}" Width="165" />
+                  <DataGridTextColumn Header="NÍVEL" Binding="{Binding FolderDepth}" Width="58" />
+                  <DataGridTextColumn Header="DIAGNÓSTICO" Binding="{Binding Issues}" Width="340" />
+                  <DataGridTextColumn Header="LOCAL" Binding="{Binding Location}" Width="480" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+
+            <Grid Grid.Row="5" Margin="0,9,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="210" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="AuditReadOnlyText" Text="A verificação é somente leitura. Nenhuma alteração é aplicada automaticamente." Foreground="#45413B" FontSize="10" VerticalAlignment="Center" />
+              <Button x:Name="ExportRekordboxAuditButton" Grid.Column="1" Content="EXPORTAR RELATÓRIO" Margin="7,0,0,0" IsEnabled="False" ToolTip="Salva a leitura atual em CSV ou JSON; não altera a biblioteca." />
+              <Button x:Name="EditAuditMetadataButton" Grid.Column="2" Content="EDITAR METADADOS" Margin="7,0,0,0" IsEnabled="False" ToolTip="Edita os dados da track selecionada somente depois da sua confirmação." />
+              <Button x:Name="ReviewAuditButton" Grid.Column="3" Content="REVISAR SELECIONADAS" Style="{StaticResource PrimaryButton}" Margin="7,0,0,0" IsEnabled="False" ToolTip="Mostra ações recomendadas; não corrige nem remove arquivos automaticamente." />
+            </Grid>
+          </Grid>
+        </TabItem>
+      </TabControl>
+      <Border Grid.Row="3" CornerRadius="0" Background="#A7A299" BorderBrush="#6F6A62" BorderThickness="0,1,0,0">
+        <Grid Margin="17,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Rectangle Width="6" Height="6" Fill="#171613" Margin="0,0,7,0" />
+            <TextBlock x:Name="StatusText" Text="PRONTO / ESCOLHA A ORIGEM" Foreground="#171613" FontFamily="Arial" FontSize="11" />
+          </StackPanel>
+          <TextBlock Grid.Column="1" Text="C — CURADORIA   •   R — REVISÃO   •   I — IDENTIFICAÇÃO   •   V — VALIDAÇÃO   •   O — ORGANIZAÇÃO" Foreground="#34312E" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="16,0" ToolTip="C — Curadoria • R — Revisão • I — Identificação • V — Validação • O — Organização" />
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="CRIVO DJ por MANEL Z0RD" Foreground="#45413B" FontSize="10" VerticalAlignment="Center" Margin="0,0,13,0" />
+            <Button x:Name="UndoButton" Content="DESFAZER EXECUÇÃO" Padding="10,4" IsEnabled="False" />
+            <Button x:Name="OpenHistoryButton" Content="HISTÓRICO" Padding="10,4" Margin="6,0,0,0" MinWidth="90" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>
