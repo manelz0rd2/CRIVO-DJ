@@ -28,12 +28,6 @@ O repositório guarda o código-fonte, testes e documentação. Binários de ter
 
 ## Visão geral
 
-### Reel de demonstração
-
-[![Storyboard do Reel do CRIVO DJ](docs/media/crivo-dj-reel-storyboard.jpg)](docs/media/crivo-dj-reel-vertical.mp4)
-
-Vídeo vertical de 32 segundos, sem trilha incorporada, pronto para receber um áudio do Instagram ou TikTok.
-
 ### Baixar
 
 ![Fila de download do CRIVO DJ](docs/screenshots/01-baixar-tracks.png)
