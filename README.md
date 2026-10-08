@@ -16,7 +16,7 @@
 
 <p align="center"><strong>CRIVO DJ por MANELZ0RD</strong></p>
 
-Aplicativo portátil para Windows que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar do caminho completo — do link até uma playlist pronta no Rekordbox — ou trabalhar separadamente com uma pasta de músicas que você já possui e com a auditoria da sua biblioteca.
+Aplicativo portátil para Windows que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar de todo o caminho, do link até uma playlist pronta no Rekordbox. Também pode trabalhar separadamente com uma pasta de músicas que você já possui ou com a auditoria da sua biblioteca.
 
 > **Beta fechado:** use sempre cópias ou backups durante os testes. A escrita direta no Rekordbox possui backup, transação e verificação, mas não substitui uma biblioteca bem protegida.
 
@@ -73,7 +73,7 @@ Os resultados podem ser pesquisados, filtrados e exportados. O escaneamento não
 
 ### Onde entra o Rekordbox
 
-O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekordbox continua responsável pela análise musical definitiva — waveform, beatgrid, BPM e tonalidade — e pela exportação final para pendrives e equipamentos.
+O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekordbox continua responsável pela análise musical definitiva, incluindo waveform, beatgrid, BPM e tonalidade, além da exportação final para pendrives e equipamentos.
 
 ## Recursos
 
@@ -109,7 +109,7 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 
 O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
 
-Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo — ou simplesmente arraste o link para o grid. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
+Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, simplesmente arraste o link para o grid. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
 
 Depois do download, **Organizar concluídos** leva as músicas diretamente para a próxima etapa. Ali você escolhe como as pastas ficarão, confere os nomes finais e pode corrigir dados faltantes antes de aplicar qualquer mudança. O padrão seguro copia os arquivos e mantém os originais preservados.
 
