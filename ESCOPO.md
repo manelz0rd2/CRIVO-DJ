@@ -28,7 +28,7 @@
 26. **Log:** modo simples ou detalhado.
 27. **Dashboard:** auditoria e resumo da última execução.
 28. **Metadata online:** MusicBrainz por texto, AcoustID opcional por fingerprint, cache, confiança, revisão, gravação de tags e undo.
-29. **Aquisição:** fila interna por link, playlists dissecadas em tracks, seleção individual, capas, duas transferências simultâneas, saída MP3 320 kbps e destino persistente.
+29. **Baixar músicas:** fila interna por link, playlists dissecadas em tracks, seleção individual, capas, duas transferências simultâneas, saída MP3 320 kbps e destino persistente.
 30. **Rekordbox:** leitura e auditoria do `master.db`, comparação com pasta/HD, diagnóstico de ANLZ, playlist de resgate e gravação transacional direta via Pyrekordbox/SQLCipher com backup e verificação.
 
 Não existem perfis obrigatórios ou estado oculto entre usos: cada uso parte da parametrização visível. O JSON é apenas backup/importação opcional das regras.
