@@ -44,7 +44,7 @@ O repositório guarda o código-fonte, testes e documentação. Binários de ter
 
 ### Workflow completo: baixar → revisar → organizar → Rekordbox
 
-O CRIVO DJ aceita tracks individuais e playlists do YouTube, SoundCloud e Spotify. Uma playlist é separada em tracks dentro do grid, com capa, título, artista, duração, origem e progresso independentes. Depois do download, as músicas seguem para a organização sem precisar remontar a seleção manualmente.
+O CRIVO DJ aceita tracks individuais e playlists do YouTube, SoundCloud e Spotify. Uma playlist é separada em tracks dentro da lista, com capa, título, artista, duração, origem e progresso independentes. Depois do download, as músicas seguem para a organização sem precisar remontar a seleção manualmente.
 
 Na etapa de organização, o programa monta uma prévia da estrutura de pastas, identifica dados faltantes e permite corrigir manualmente título, artista, álbum, gênero, ano e outros campos antes de aplicar qualquer mudança. Ao concluir, os arquivos ficam organizados no computador e, opcionalmente, são registrados na coleção e em uma playlist do Rekordbox com o nome escolhido no CRIVO.
 
@@ -109,7 +109,7 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 
 O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
 
-Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, simplesmente arraste o link para o grid. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
+Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, simplesmente arraste o link para a lista. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
 
 Depois do download, **Organizar concluídos** leva as músicas diretamente para a próxima etapa. Ali você escolhe como as pastas ficarão, confere os nomes finais e pode corrigir dados faltantes antes de aplicar qualquer mudança. O padrão seguro copia os arquivos e mantém os originais preservados.
 
@@ -154,7 +154,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tests\TestRekordboxSan
 powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\Tests\TestAuditRuntime.ps1
 ```
 
-O segundo teste escreve apenas numa cópia temporária do `master.db`, confere a playlist, repete a importação para detectar duplicação e verifica por hash que o banco real permaneceu intacto. O terceiro percorre exatamente a rotina do botão **Analisar agora** em modo somente leitura e confirma indicadores e grid.
+O segundo teste escreve apenas numa cópia temporária do `master.db`, confere a playlist, repete a importação para detectar duplicação e verifica por hash que o banco real permaneceu intacto. O terceiro percorre exatamente a rotina do botão **Analisar agora** em modo somente leitura e confirma os indicadores e a lista de tracks.
 
 ## Estrutura do projeto
 

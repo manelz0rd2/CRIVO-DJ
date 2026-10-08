@@ -23,6 +23,6 @@ if(-not$script:RekordboxAudit -or [int]$AuditCollectionCount.Text -ne @($library
 if([int]$script:RekordboxAudit.MissingFiles -ne $expectedMissing){throw "A auditoria marcou $($script:RekordboxAudit.MissingFiles) arquivo(s) físico(s) ausente(s), mas a verificação direta encontrou $expectedMissing."}
 if([int]$script:RekordboxAudit.UnavailableFiles -lt 0){throw 'O contador de unidades indisponíveis ficou inválido.'}
 Select-ComboTag $AuditFilterCombo 'All';Update-RekordboxAuditView
-if(@($RekordboxAuditGrid.ItemsSource).Count -ne @($library.Tracks).Count){throw 'O grid da Auditoria não recebeu todas as tracks.'}
+if(@($RekordboxAuditGrid.ItemsSource).Count -ne @($library.Tracks).Count){throw 'A lista da Auditoria não recebeu todas as tracks.'}
 if($null -eq $AuditQualityCount.Text -or $null -eq $AuditDataCount.Text){throw 'Os novos indicadores da Auditoria não foram atualizados.'}
-Write-Output "AUDITORIA RUNTIME OK: $(@($library.Tracks).Count) tracks e $(@($library.Playlists).Count) playlists; scanner, indicadores e grid atualizados."
+Write-Output "AUDITORIA RUNTIME OK: $(@($library.Tracks).Count) tracks e $(@($library.Playlists).Count) playlists; scanner, indicadores e lista atualizados."

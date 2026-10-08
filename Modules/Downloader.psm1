@@ -259,7 +259,7 @@ function Complete-ODTSpotifyResolver {
         if(-not$savedSignal){return @()}
         # Algumas versões empacotadas do spotDL mantêm um processo auxiliar vivo
         # depois de gravar o JSON. O arquivo e a mensagem Saved são a conclusão
-        # real; encerramos apenas esse resolvedor já finalizado para liberar o grid.
+        # real; encerramos apenas esse resolvedor já finalizado para liberar a lista.
         try{$Resolver.Process.Kill();$Resolver.Process.WaitForExit()}catch{}
     }
     $Resolver.Process.WaitForExit();$Resolver.FinishedAt=Get-Date;$text=(Read-SharedUtf8Text -Path $Resolver.StdOutPath)+"`n"+(Read-SharedUtf8Text -Path $Resolver.StdErrPath);$exitCode=[int]$Resolver.Process.ExitCode

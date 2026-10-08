@@ -12,7 +12,7 @@ Todas as mudanças relevantes do CRIVO DJ serão registradas neste arquivo.
 - edição manual e enriquecimento de metadados com MusicBrainz e AcoustID opcional;
 - integração transacional com o banco do Rekordbox, com backup e verificação;
 - auditoria da coleção e de mídias exportadas, incluindo arquivos ausentes, duplicatas, análise e qualidade;
-- exibição das playlists do Rekordbox no grid de auditoria;
+- exibição das playlists do Rekordbox na lista da auditoria;
 - verificação de ambiente e diagnóstico sanitizado para suporte;
 - armazenamento portátil com dados mutáveis isolados em `%LOCALAPPDATA%\CRIVO DJ`.
 

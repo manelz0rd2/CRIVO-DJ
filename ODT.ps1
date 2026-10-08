@@ -439,7 +439,7 @@ function Invoke-CurrentPlan {
         $completedCount=$result.Success;$skippedCount=if($result.PSObject.Properties['Skipped']){[int]$result.Skipped}else{0}
         [void](Scan-SelectedFolder);$script:Plan=$null;$ApplyButton.IsEnabled=$false
         $PlanSummary.Text="Organização concluída • $completedCount track(s) processada(s) • $skippedCount ignorada(s) • $($result.Errors) erro(s)"
-        Set-Status 'Organização concluída — grid atualizado' 100
+        Set-Status 'Organização concluída. Lista atualizada.' 100
         Show-Message "Organização concluída.`n`nProcessadas: $completedCount`nIgnoradas: $skippedCount`nErros: $($result.Errors)$extra" 'Tudo pronto';Update-ContextInformation
     } catch {
         Write-AppLog -Message $_.Exception.ToString() -Level ERROR
@@ -635,7 +635,7 @@ function Add-DownloadLinksToGrid {
 
 function Start-DownloadUrls {
     try{[void](Add-DownloadLinksToGrid -Text $DownloadUrlText.Text);$DownloadUrlText.Clear();$ready=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Pronto' -and $_.IsSelected});$analyzing=@($script:DownloadQueue|Where-Object{$_.Status -in @('Analisando','Expandindo')}).Count
-        if(-not$ready.Count -and -not$analyzing){$script:DownloadStartRequested=$false;Show-Message 'Marque no grid pelo menos uma track pronta para baixar.' 'Baixar tracks';return}
+        if(-not$ready.Count -and -not$analyzing){$script:DownloadStartRequested=$false;Show-Message 'Marque na lista pelo menos uma track pronta para baixar.' 'Baixar tracks';return}
         $script:DownloadStartRequested=$true
         foreach($request in $ready){$request.QualityCode='320';$request.Quality='MP3 320 kbps';$request.Status='Pendente';$request.Progress='0%';$request.ProgressValue=0;$request.Detail='Aguardando vaga para baixar'}
         $DownloadQueueGrid.Items.Refresh();$DownloadStatusText.Text=$(if($analyzing){'Análise em andamento; as tracks selecionadas iniciarão assim que os dados chegarem.'}else{"$($ready.Count) track(s) adicionada(s) à fila de download."});$script:DownloadTimer.Start()
@@ -648,7 +648,7 @@ function Add-DroppedDownloadLinks {
 }
 
 function Remove-SelectedDownloadsFromGrid {
-    $selected=@($DownloadQueueGrid.SelectedItems);if(-not$selected.Count){Show-Message 'Destaque uma ou mais linhas no grid para remover.' 'Remover da fila';return}
+    $selected=@($DownloadQueueGrid.SelectedItems);if(-not$selected.Count){Show-Message 'Destaque uma ou mais linhas da lista para remover.' 'Remover da fila';return}
     $removed=0;$blocked=0;foreach($item in $selected){if($item.Status -in @('Baixando','Analisando','Expandindo','Pendente')){$blocked++;continue};if($script:DownloadQueue.Remove($item)){$removed++}}
     $DownloadQueueGrid.Items.Refresh();$DownloadStatusText.Text="$removed item(ns) removido(s) da fila.";if($blocked){Show-Message "$blocked item(ns) estão em processamento e não foram removidos." 'Remover da fila'}
 }
@@ -917,14 +917,14 @@ function Update-OrganizeMetadataButton {
 }
 
 function Edit-SelectedOrganizeMetadata {
-    $selected=@($PreviewGrid.SelectedItems);if($selected.Count -ne 1){Show-Message 'Selecione uma única track no grid para editar os metadados.' 'Editar metadados';return};$track=$selected[0];$path=[string]$track.FullName
+    $selected=@($PreviewGrid.SelectedItems);if($selected.Count -ne 1){Show-Message 'Selecione uma única track na lista para editar os metadados.' 'Editar metadados';return};$track=$selected[0];$path=[string]$track.FullName
     if(-not(Test-Path -LiteralPath $path -PathType Leaf)){Show-Message 'O arquivo físico desta track não está disponível.' 'Editar metadados' Warning;return}
     $metadata=Show-AuditMetadataEditor -Row ([pscustomobject]@{Title=[string]$track.Title;Artist=[string]$track.Artist;Album=[string]$track.Album;Genre=[string]$track.Genre;Year=[string]$track.Year;Bpm=[string]$track.Bpm;Key=[string]$track.Key;Location=$path});if(-not$metadata){return}
     $tagResult=$null;try{$tagResult=Write-ApprovedMetadata -Tracks @([pscustomobject]@{FullName=$path;Title=$metadata.Title;Artist=$metadata.Artist;Album=$metadata.Album;Genre=$metadata.Genre;Year=$metadata.Year;Bpm=$metadata.Bpm;Key=$metadata.Key}) -Template 'Edição manual da organização';if($tagResult.Errors){throw 'Não foi possível gravar os metadados no arquivo.'};foreach($field in @('Title','Artist','Album','Genre','Year','Bpm','Key')){if($metadata.$field){$track.$field=$metadata.$field}};if($track.Title){$track.MissingTitle=$false};if($track.Genre){$track.MissingGenre=$false};$PreviewGrid.Items.Refresh();Update-Dashboard;Refresh-PreviewFilter;Invalidate-Plan;Show-Message 'Metadados salvos no arquivo e no histórico do CRIVO DJ.' 'Metadados atualizados'}catch{if($tagResult -and $tagResult.Updated){try{Undo-Operation -Operation $tagResult.Operation|Out-Null}catch{}};Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao salvar metadados' Error}
 }
 
 function Show-AuditSelectionReview {
-    $selected=@($RekordboxAuditGrid.SelectedItems);if(-not$selected.Count){Show-Message 'Selecione uma ou mais linhas no grid.' 'Revisar auditoria';return}
+    $selected=@($RekordboxAuditGrid.SelectedItems);if(-not$selected.Count){Show-Message 'Selecione uma ou mais linhas da lista.' 'Revisar auditoria';return}
     $lines=New-Object Collections.Generic.List[string]
     foreach($row in @($selected|Select-Object -First 12)){
         $action=if($row.IssueCategories -match 'Unavailable'){'desbloquear ou reconectar a unidade e escanear novamente'}elseif($row.IssueCategories -match 'Missing'){'localizar novamente o arquivo no Rekordbox'}elseif($row.IssueCategories -match 'Integrity'){'substituir ou copiar novamente o arquivo'}elseif($row.IssueCategories -match 'Quality'){'comparar com uma fonte de melhor qualidade'}elseif($row.IssueCategories -match 'Metadata'){'revisar os campos de metadata'}elseif($row.IssueCategories -match 'Analysis'){'analisar novamente no Rekordbox e reexportar'}elseif($row.IssueCategories -match 'PossibleDuplicate'){'comparar versão, remix, duração e qualidade antes de decidir'}elseif($row.IssueCategories -match '(^|;)Duplicate(;|$)'){'comparar os caminhos e manter apenas a cópia correta'}elseif($row.IssueCategories -match 'Location'){'consolidar numa pasta gerenciada pelo CRIVO e depois relocalizar pelo Rekordbox'}elseif($row.IssueCategories -match 'Structure'){'reexportar ou reparar o dispositivo pelo Rekordbox'}else{'revisar manualmente'}
@@ -1234,7 +1234,7 @@ $script:DownloadTimer.Add_Tick({
                 # Measure-Object mantém o mesmo resultado sem derrubar a fila
                 # enquanto o processo ainda não terminou.
                 $resolvedCount=($resolved|Measure-Object).Count
-                if($resolvedCount -gt 0){$pendingItems=New-Object Collections.Generic.List[object];foreach($request in @($resolved)){$pendingItems.Add($request)};$item|Add-Member NoteProperty PendingItems $pendingItems -Force;$item.Status='Expandindo';$item.ProgressValue=100;$item.Progress='100%';$item.Detail='Adicionando tracks ao grid'}
+                if($resolvedCount -gt 0){$pendingItems=New-Object Collections.Generic.List[object];foreach($request in @($resolved)){$pendingItems.Add($request)};$item|Add-Member NoteProperty PendingItems $pendingItems -Force;$item.Status='Expandindo';$item.ProgressValue=100;$item.Progress='100%';$item.Detail='Adicionando tracks à lista'}
             }
             elseif($item.Kind -in @('SpotifyResolver','PlaylistResolver') -and $item.Status -eq 'Expandindo'){
                 # Uma playlist de apenas uma faixa é desembrulhada como objeto
@@ -1249,7 +1249,7 @@ $script:DownloadTimer.Add_Tick({
                     $newRequests.Add($pendingItems[0])
                     $pendingItems.RemoveAt(0)
                     $item.PendingItems=$pendingItems
-                }else{$item.Status='Expandida';$item.Detail='Tracks adicionadas ao grid';$resolvedContainers.Add($item)}
+                }else{$item.Status='Expandida';$item.Detail='Tracks adicionadas à lista';$resolvedContainers.Add($item)}
             }
             elseif($item.Kind -eq 'Download' -and $item.Status -eq 'Baixando'){try{[void](Get-ODTDownloadProgress -Download $item)}catch{$item.Status='Falhou';$item.Detail="Falha ao atualizar: $($_.Exception.Message)";Write-AppLog -Message $_.Exception.ToString() -Level ERROR}}
         }

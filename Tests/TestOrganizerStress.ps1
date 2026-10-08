@@ -35,7 +35,7 @@ try {
     $plan=New-OrganizationPlan -Tracks $tracks.ToArray() -Source $source -Destination $destination -Template '{AAAA}\{GENERO}\{BPM_RANGE}\{ARTISTA}' -TreeMode FlattenSource -Action Copy -Conflict Rename -RenameFiles -Settings $settings
     $timer.Stop()
     $expected=$TrackCount-[Math]::Floor($TrackCount/6)
-    Assert-True ($plan.Items.Count -eq $expected) 'o plano deve respeitar todas as marcações do grid'
+    Assert-True ($plan.Items.Count -eq $expected) 'o plano deve respeitar todas as marcações da lista'
     Assert-True (@($tracks|Where-Object{-not$_.Selected -and ($_.Status -ne 'Desmarcada' -or $_.Destination)}).Count -eq 0) 'tracks desmarcadas não podem conservar destino ou status de plano anterior'
     Assert-True (@($plan.Items|Select-Object -ExpandProperty Destination -Unique).Count -eq $expected) 'colisões em lote devem gerar destinos únicos'
     $destinationPrefix=[IO.Path]::GetFullPath($destination).TrimEnd('\')+'\'

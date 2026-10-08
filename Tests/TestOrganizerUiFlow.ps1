@@ -14,8 +14,8 @@ try{
     $windowsPowerShell=Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $output=@(& $windowsPowerShell -NoLogo -NoProfile -ExecutionPolicy Bypass -STA -File (Join-Path $app 'ODT.ps1') -ValidateOnly -ValidationSource (Join-Path $testRoot 'Pesquisa') 2>&1)
     if($LASTEXITCODE -ne 0){throw ($output -join [Environment]::NewLine)}
-    if(($output -join "`n") -notmatch 'FOLDER AND DESTINATION FLOW OK: 12') {throw 'O fluxo visual não confirmou scan, grid, destino interno e destino externo.'}
-    Write-Output 'ORGANIZER UI FLOW OK: seleção, scan, grid, modelos, destinos e estados dos botões'
+    if(($output -join "`n") -notmatch 'FOLDER AND DESTINATION FLOW OK: 12') {throw 'O fluxo visual não confirmou scan, lista, destino interno e destino externo.'}
+    Write-Output 'ORGANIZER UI FLOW OK: seleção, scan, lista, modelos, destinos e estados dos botões'
 }finally{
     Remove-Item Env:ODT_DATA_ROOT -ErrorAction SilentlyContinue
     [GC]::Collect();[GC]::WaitForPendingFinalizers()

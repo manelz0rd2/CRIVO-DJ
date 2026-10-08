@@ -241,7 +241,7 @@
                     <ColumnDefinition />
                     <ColumnDefinition Width="175" />
                   </Grid.ColumnDefinitions>
-                  <TextBox x:Name="DownloadUrlText" TextWrapping="NoWrap" Height="30" VerticalContentAlignment="Center" ToolTip="Um ou mais links. Adicionar ao grid não inicia o download." />
+                  <TextBox x:Name="DownloadUrlText" TextWrapping="NoWrap" Height="30" VerticalContentAlignment="Center" ToolTip="Um ou mais links. Adicionar à lista não inicia o download." />
                   <Button x:Name="AddDownloadLinkButton" Grid.Column="1" Content="ADICIONAR" Style="{StaticResource PrimaryButton}" Height="32" Padding="8,2" Margin="7,0,0,0" VerticalAlignment="Center" />
                 </Grid>
               </StackPanel>
@@ -266,7 +266,7 @@
               </Grid.ColumnDefinitions>
               <TextBlock Text="SAÍDA FIXA: MP3 320 KBPS" FontWeight="Bold" VerticalAlignment="Center" />
               <TextBlock Grid.Column="1" Text="Os downloads concluídos ficam prontos para organizar." Foreground="#57534C" VerticalAlignment="Center" />
-              <Button x:Name="RemoveDownloadButton" Grid.Column="2" Content="REMOVER" Margin="0,4,8,4" ToolTip="Remove as linhas destacadas no grid." />
+              <Button x:Name="RemoveDownloadButton" Grid.Column="2" Content="REMOVER" Margin="0,4,8,4" ToolTip="Remove as linhas destacadas na lista." />
               <Button x:Name="ClearDownloadsButton" Grid.Column="3" Content="LIMPAR CONCLUÍDOS" Margin="0,4,8,4" />
               <Button x:Name="StartDownloadButton" Grid.Column="4" Content="INICIAR DOWNLOAD" Style="{StaticResource PrimaryButton}" Margin="0,4,0,4" />
             </Grid>
