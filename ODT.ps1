@@ -184,7 +184,7 @@ if (Test-Path -LiteralPath $iconPath) {
 
 $controlNames = @(
     'TitleBar','MinimizeButton','CloseButton','MainTabs',
-    'SourceText','ChooseFolderButton','ConfigPanel','ModeDate','ModeGenre','ModeDateGenre','ModeGenreBpm',
+    'SourceText','ChooseFolderButton','OrganizerOptionsScroll','ConfigPanel','ModeDate','ModeGenre','ModeDateGenre','ModeGenreBpm',
     'DestinationSame','DestinationOther',
     'FolderPatternText','CustomizeFolderCheck','RenameFilesCheck','DetectDuplicatesCheck','OnlyAudioCheck','CreateReportCheck','CreateRestoreCheck',
     'DestinationText','ChooseDestinationButton','ActionCombo','ConflictCombo','DateSourceCombo','DuplicateLevelCombo','MissingPolicyCombo','WatchFolderCheck','SendRekordboxCheck','OrganizerPlaylistNameText','RekordboxExeText','ChooseRekordboxExeButton',
@@ -1429,6 +1429,7 @@ if($MarketingScreenshots){
     $PlanSummary.Text='24 tracks analisadas • 21 prontas • 3 com dados faltantes • nenhuma alteração aplicada'
     $ModeDateGenre.IsChecked=$true;$FolderPatternText.Text='{AAAA} - {MES}\{GENERO}'
     $SendRekordboxCheck.IsChecked=$true;$OrganizerPlaylistNameText.Text='Pesquisa Outubro — Organizado'
+    $RekordboxExeText.Text='C:\Program Files\rekordbox\rekordbox.exe'
     $ApplyButton.IsEnabled=$true;$EditTrackMetadataButton.IsEnabled=$true
     $MainTabs.SelectedIndex=1;Update-ContextInformation
     $TotalCount.Text='24'
@@ -1436,6 +1437,8 @@ if($MarketingScreenshots){
     $GenreLabel2.Text='UK GARAGE';$NoGenreCount.Text='6';$GenreCounter2.Visibility='Visible'
     $GenreLabel3.Text='DEEP HOUSE';$DuplicateCount.Text='4';$GenreCounter3.Visibility='Visible'
     $StatusText.Text='ORGANIZAR • 24 TRACKS • PLANO PRONTO PARA REVISÃO'
+    $OrganizerOptionsScroll.ScrollToVerticalOffset(335)
+    Pump-Ui
     Save-MarketingScreenshot '02-organizar-biblioteca.png'
 
     $demoAudit=@(
