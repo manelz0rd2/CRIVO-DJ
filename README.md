@@ -14,9 +14,9 @@
   <img alt="Validação" src="https://github.com/manelz0rd2/CRIVO-DJ/actions/workflows/validate.yml/badge.svg">
 </p>
 
-<p align="center"><strong>CRIVO DJ por MANEL Z0RD</strong></p>
+<p align="center"><strong>CRIVO DJ por MANELZ0RD</strong></p>
 
-Aplicativo portátil para Windows que audita uma pesquisa musical, calcula a organização completa e só copia ou move arquivos após a confirmação. A interface usa a identidade própria do CRIVO: cinza-liga, papel mineral e preto de referência, com moldura, redimensionamento e diálogos nativos do Windows.
+Aplicativo portátil para Windows que conecta aquisição, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar do caminho completo — do link até uma playlist pronta no Rekordbox — ou trabalhar separadamente com uma pasta de músicas que você já possui e com a auditoria da sua biblioteca.
 
 > **Beta fechado:** use sempre cópias ou backups durante os testes. A escrita direta no Rekordbox possui backup, transação e verificação, mas não substitui uma biblioteca bem protegida.
 
@@ -26,16 +26,54 @@ A versão portátil completa, com as dependências necessárias, é distribuída
 
 O repositório guarda o código-fonte, testes e documentação. Binários de terceiros e o pacote pronto ficam anexados à Release para manter o histórico Git leve e auditável.
 
-## Como usar
+## Visão geral
 
-1. Abra `CRIVO DJ.exe` para iniciar com ícone próprio e sem exibir uma janela de PowerShell.
-2. Na primeira aba, **Baixar**, cole ou digite links do YouTube, SoundCloud ou Spotify no campo, ou arraste-os para a lista de músicas abaixo. Tracks individuais e playlists são aceitas; playlists são separadas em tracks antes do download.
-3. Clique em **Escolher pasta** para abrir o seletor amplo do Explorer, ou arraste uma pasta para a janela.
-4. Escolha Data, Gênero, Data + Gênero ou Gênero + BPM.
-5. Em **Como ficará a pasta**, mantenha o modelo automático ou personalize nomes e níveis sem remover os critérios escolhidos.
-6. Escolha o destino: `Pesquisa Organizada` dentro da origem ou outro diretório.
-7. Revise e edite nome final, artista, gênero ou destino na tabela. BPM, tonalidade e qualidade continuam disponíveis nas regras, na auditoria e nos relatórios sem poluir o grid principal.
-8. Clique em **Organizar**. O padrão seguro é copiar, mantendo os originais.
+### Baixar
+
+![Fila de download do CRIVO DJ](docs/screenshots/01-baixar-tracks.png)
+
+### Organizar
+
+![Planejamento de organização do CRIVO DJ](docs/screenshots/02-organizar-biblioteca.png)
+
+### Auditoria
+
+![Auditoria da biblioteca do Rekordbox](docs/screenshots/03-auditoria-rekordbox.png)
+
+## O que o CRIVO DJ faz
+
+### Workflow completo: baixar → revisar → organizar → Rekordbox
+
+O CRIVO DJ aceita tracks individuais e playlists do YouTube, SoundCloud e Spotify. Uma playlist é separada em tracks dentro do grid, com capa, título, artista, duração, origem e progresso independentes. Depois do download, as músicas seguem para a organização sem precisar remontar a seleção manualmente.
+
+Na etapa de organização, o programa monta uma prévia da estrutura de pastas, identifica dados faltantes e permite corrigir manualmente título, artista, álbum, gênero, ano e outros campos antes de aplicar qualquer mudança. Ao concluir, os arquivos ficam organizados no computador e, opcionalmente, são registrados na coleção e em uma playlist do Rekordbox com o nome escolhido no CRIVO.
+
+```text
+track ou playlist → fila com capas → revisão de dados → organização física → playlist no Rekordbox
+```
+
+O arquivo de áudio permanece no destino organizado; o Rekordbox recebe a referência correta para a track. A integração direta cria backup do banco, usa transação e confere o resultado antes de encerrar.
+
+### Somente organizar músicas existentes
+
+O download não é obrigatório. Você pode apontar o CRIVO DJ para qualquer pasta que já contenha sua pesquisa musical, revisar como cada arquivo ficará, editar dados faltantes e organizar por data, gênero, BPM ou uma combinação desses critérios. O modo padrão copia os arquivos e preserva os originais; mover é uma escolha explícita. Essa organização também pode terminar em uma playlist criada diretamente no Rekordbox.
+
+### Auditoria independente da biblioteca
+
+A Auditoria funciona como uma ferramenta separada do fluxo de download e organização. Ela lê a biblioteca do Rekordbox em modo somente leitura durante o escaneamento e ajuda a localizar:
+
+- tracks sem arquivo físico, com caminho inacessível ou fora da coleção;
+- metadados incompletos e possíveis problemas de qualidade;
+- tracks sem dados de análise do Rekordbox;
+- duplicatas exatas ou prováveis;
+- arquivos órfãos e inconsistências entre o banco, as pastas e um pendrive exportado;
+- as playlists e pastas de playlists das quais cada track faz parte.
+
+Os resultados podem ser pesquisados, filtrados e exportados. O escaneamento não corrige nada automaticamente: a revisão e qualquer gravação posterior são decisões explícitas do usuário.
+
+### Onde entra o Rekordbox
+
+O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekordbox continua responsável pela análise musical definitiva — waveform, beatgrid, BPM e tonalidade — e pela exportação final para pendrives e equipamentos.
 
 ## Recursos
 
@@ -134,4 +172,4 @@ Consulte também o [histórico de versões](CHANGELOG.md), as [orientações par
 
 ## Licença
 
-Este repositório ainda não possui uma licença pública de reutilização. Todos os direitos permanecem reservados a MANEL Z0RD até a definição da licença do projeto. As dependências mantêm suas próprias licenças, listadas em `THIRD-PARTY.md`.
+Este repositório ainda não possui uma licença pública de reutilização. Todos os direitos permanecem reservados a MANELZ0RD até a definição da licença do projeto. As dependências mantêm suas próprias licenças, listadas em `THIRD-PARTY.md`.

@@ -1,6 +1,12 @@
 ﻿#requires -Version 5.1
 [CmdletBinding()]
-param([switch]$ValidateOnly, [string]$ValidationSource, [string]$DownloadValidationFile)
+param(
+    [switch]$ValidateOnly,
+    [string]$ValidationSource,
+    [string]$DownloadValidationFile,
+    [switch]$MarketingScreenshots,
+    [string]$MarketingOutput
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -1300,7 +1306,7 @@ if ($ValidateOnly) {
     if (-not $window.Icon) { throw 'O ícone próprio do CRIVO DJ não foi carregado na janela.' }
     $tabOrder=@($MainTabs.Items|ForEach-Object{[string]$_.Header}) -join '|';if($tabOrder -ne 'BAIXAR|ORGANIZAR|AUDITORIA'){throw "Ordem de abas inválida: $tabOrder"}
     if(-not$SourceText -or -not$SendRekordboxCheck -or -not$OrganizerPlaylistNameText -or -not$EditTrackMetadataButton -or -not$AuditLibraryModeButton -or -not$AuditUsbModeButton -or -not$AuditUsbPathText -or -not$AuditFilterCombo -or -not$EditAuditMetadataButton -or -not$ReviewAuditButton -or -not$AuditDuplicateCount -or -not$SystemCheckButton -or -not$ExportDiagnosticButton -or -not$EnvironmentStatusText){throw 'Controles do fluxo Baixar > Organizar > Auditoria não foram carregados.'}
-    if($window.Title -ne 'CRIVO DJ por MANEL Z0RD'){throw 'O título compacto da janela não foi aplicado.'}
+    if($window.Title -ne 'CRIVO DJ por MANELZ0RD'){throw 'O título compacto da janela não foi aplicado.'}
     $auditHeaders=@($RekordboxAuditGrid.Columns|ForEach-Object{[string]$_.Header});foreach($header in @('ÁLBUM','GÊNERO','ANO','BPM','TONALIDADE','FORMATO','BITRATE','SAMPLE RATE','PLAYLIST(S)','ANÁLISE','PROBLEMA','DUPLICIDADE','PASTA ORIGEM','NÍVEL','DIAGNÓSTICO','LOCAL')){if($auditHeaders -notcontains $header){throw "A coluna de auditoria '$header' não foi carregada."}}
     $ModeGenreBpm.IsChecked=$true; Sync-FolderPattern
     if ($FolderPatternText.Text -ne '{GENERO} - {BPM_RANGE}') { throw 'O modelo de pasta não acompanhou o critério Gênero + BPM.' }
@@ -1350,6 +1356,107 @@ if($DownloadValidationFile){
     if($withoutArtwork.Count){throw 'Uma track resolvida ficou sem capa e sem busca alternativa.'}
     if(-not$withArtwork.Count){throw 'Nenhuma fonte retornou capa durante a validação.'}
     Write-Output "DOWNLOAD VALIDATION OK: $($ready.Count) track(s), $($withArtwork.Count) capa(s), $($failed.Count) falha(s), fila liberada"
+    $window.Close();return
+}
+if($MarketingScreenshots){
+    if([string]::IsNullOrWhiteSpace($MarketingOutput)){$MarketingOutput=Join-Path $AppRoot 'docs\screenshots'}
+    [IO.Directory]::CreateDirectory($MarketingOutput)|Out-Null
+    $window.Width=1440;$window.Height=900;$window.WindowStartupLocation=[Windows.WindowStartupLocation]::CenterScreen
+
+    function Save-MarketingScreenshot {
+        param([string]$Name)
+        Pump-Ui;$window.UpdateLayout();Start-Sleep -Milliseconds 350;Pump-Ui
+        $visual=$window.Content
+        $width=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualWidth))
+        $height=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualHeight))
+        $bitmap=New-Object Windows.Media.Imaging.RenderTargetBitmap($width,$height,96,96,[Windows.Media.PixelFormats]::Pbgra32)
+        $bitmap.Render($visual)
+        $encoder=New-Object Windows.Media.Imaging.PngBitmapEncoder
+        $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+        $path=Join-Path $MarketingOutput $Name
+        $stream=[IO.File]::Open($path,[IO.FileMode]::Create)
+        try{$encoder.Save($stream)}finally{$stream.Dispose()}
+        Write-Output $path
+    }
+
+    function Get-MarketingBitmap {
+        param([string]$Path)
+        $image=New-Object Windows.Media.Imaging.BitmapImage
+        $image.BeginInit();$image.CacheOption=[Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $image.UriSource=[Uri]::new($Path,[UriKind]::Absolute);$image.EndInit();$image.Freeze()
+        return $image
+    }
+
+    $demoArtwork=@(
+        ([Uri]::new((Join-Path $AppRoot 'Assets\Marketing\midnight-signal.jpg'),[UriKind]::Absolute).AbsoluteUri),
+        ([Uri]::new((Join-Path $AppRoot 'Assets\Marketing\low-pressure.jpg'),[UriKind]::Absolute).AbsoluteUri),
+        ([Uri]::new((Join-Path $AppRoot 'Assets\Marketing\sunday-service.jpg'),[UriKind]::Absolute).AbsoluteUri),
+        ([Uri]::new((Join-Path $AppRoot 'Assets\Marketing\glass-rooms.jpg'),[UriKind]::Absolute).AbsoluteUri)
+    )
+    $demoDownloads=@(
+        [pscustomobject]@{IsSelected=$true;Thumbnail=$demoArtwork[0];Title='Midnight Signal — Aurora Lines';Url='soundcloud.com/aurora-lines/midnight-signal';Source='SoundCloud';Duration='06:18';ProgressValue=100;Progress='100%';Detail='MP3 320 kbps • capa e metadados aplicados';Status='Concluído'},
+        [pscustomobject]@{IsSelected=$true;Thumbnail=$demoArtwork[1];Title='Low Pressure — Nilo S.';Url='youtube.com/watch?v=crivo-demo-01';Source='YouTube';Duration='05:42';ProgressValue=100;Progress='100%';Detail='MP3 320 kbps • pronta para organizar';Status='Concluído'},
+        [pscustomobject]@{IsSelected=$true;Thumbnail=$demoArtwork[2];Title='Sunday Service (Club Mix) — Mabel Costa';Url='open.spotify.com/track/crivo-demo-02';Source='Spotify';Duration='07:04';ProgressValue=68;Progress='68%';Detail='Baixando áudio • 3,8 MB de 5,6 MB';Status='Baixando'},
+        [pscustomobject]@{IsSelected=$true;Thumbnail=$demoArtwork[3];Title='Glass Rooms — Theo Vale';Url='soundcloud.com/theo-vale/glass-rooms';Source='SoundCloud';Duration='06:31';ProgressValue=0;Progress='';Detail='Capa e metadados encontrados • aguardando início';Status='Pronto'}
+    )
+    $DownloadQueueGrid.ItemsSource=$demoDownloads
+    $DownloadDestinationText.Text='C:\Music\CRIVO DJ\Downloads'
+    $DownloadStatusText.Text='2 concluídas • 1 em andamento • 1 pronta para baixar'
+    $MainTabs.SelectedIndex=0;Update-ContextInformation
+    $StatusText.Text='BAIXAR • 4 TRACKS NA FILA • 1 EM ANDAMENTO'
+
+    $window.Show();Pump-Ui
+    $DownloadStatusText.Text='2 concluídas • 1 em andamento • 1 pronta para baixar'
+    $StatusText.Text='BAIXAR • 4 TRACKS NA FILA • YOUTUBE, SOUNDCLOUD E SPOTIFY'
+    Save-MarketingScreenshot '01-baixar-tracks.png'
+
+    $demoOrganize=@(
+        [pscustomobject]@{Selected=$true;OutputName='Aurora Lines - Midnight Signal.mp3';Artist='Aurora Lines';Genre='Deep House';Destination='2026 - 10 - Outubro\Deep House\120-124 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Nilo S. - Low Pressure.mp3';Artist='Nilo S.';Genre='UK Garage';Destination='2026 - 10 - Outubro\UK Garage\130-134 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Mabel Costa - Sunday Service (Club Mix).mp3';Artist='Mabel Costa';Genre='House';Destination='2026 - 10 - Outubro\House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Theo Vale - Glass Rooms.mp3';Artist='Theo Vale';Genre='Minimal House';Destination='2026 - 10 - Outubro\Minimal House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Luma - Soft Focus.mp3';Artist='Luma';Genre='Tech House';Destination='2026 - 10 - Outubro\Tech House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Caio Norte - Afterimage.mp3';Artist='Caio Norte';Genre='House';Destination='2026 - 10 - Outubro\House\125-129 BPM'}
+    )
+    $SourceText.Text='C:\Music\Pesquisa Outubro'
+    $DestinationText.Text='C:\Music\Pesquisa Outubro\Pesquisa Organizada'
+    $ConfigPanel.IsEnabled=$true;$ConfigPanel.Opacity=1
+    $PreviewGrid.ItemsSource=$demoOrganize
+    $TotalCount.Text='24';$ReadyCount.Text='21';$NoGenreCount.Text='3';$DuplicateCount.Text='2'
+    $GenreLabel1.Text='HOUSE';$ReadyCount.Text='9';$GenreCounter1.Visibility='Visible'
+    $GenreLabel2.Text='UK GARAGE';$NoGenreCount.Text='6';$GenreCounter2.Visibility='Visible'
+    $GenreLabel3.Text='DEEP HOUSE';$DuplicateCount.Text='4';$GenreCounter3.Visibility='Visible'
+    $PlanSummary.Text='24 tracks analisadas • 21 prontas • 3 com dados faltantes • nenhuma alteração aplicada'
+    $ModeDateGenre.IsChecked=$true;$FolderPatternText.Text='{AAAA} - {MES}\{GENERO}'
+    $SendRekordboxCheck.IsChecked=$true;$OrganizerPlaylistNameText.Text='Pesquisa Outubro — Organizado'
+    $ApplyButton.IsEnabled=$true;$EditTrackMetadataButton.IsEnabled=$true
+    $MainTabs.SelectedIndex=1;Update-ContextInformation
+    $TotalCount.Text='24'
+    $GenreLabel1.Text='HOUSE';$ReadyCount.Text='9';$GenreCounter1.Visibility='Visible'
+    $GenreLabel2.Text='UK GARAGE';$NoGenreCount.Text='6';$GenreCounter2.Visibility='Visible'
+    $GenreLabel3.Text='DEEP HOUSE';$DuplicateCount.Text='4';$GenreCounter3.Visibility='Visible'
+    $StatusText.Text='ORGANIZAR • 24 TRACKS • PLANO PRONTO PARA REVISÃO'
+    Save-MarketingScreenshot '02-organizar-biblioteca.png'
+
+    $demoAudit=@(
+        [pscustomobject]@{Title='Midnight Signal';Artist='Aurora Lines';Album='Night Transit';Genre='Deep House';Year='2026';Bpm='123';Key='8A';Codec='MP3';Bitrate='320';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Warm Up';Analysis='Completa';IssueType='Saudável';DuplicateType='—';SourceFolder='Pesquisa Outubro';FolderDepth='2';Issues='Nenhum problema encontrado';Location='D:\DJ Library\Deep House\Aurora Lines - Midnight Signal.mp3'},
+        [pscustomobject]@{Title='Low Pressure';Artist='Nilo S.';Album='Pressure Tools';Genre='UK Garage';Year='2026';Bpm='132';Key='5A';Codec='MP3';Bitrate='320';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Peak Time';Analysis='Completa';IssueType='Saudável';DuplicateType='—';SourceFolder='UK Garage';FolderDepth='3';Issues='Nenhum problema encontrado';Location='D:\DJ Library\UK Garage\Nilo S. - Low Pressure.mp3'},
+        [pscustomobject]@{Title='Sunday Service (Club Mix)';Artist='Mabel Costa';Album='Sunday Service';Genre='House';Year='2026';Bpm='126';Key='10A';Codec='MP3';Bitrate='256';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Vocals';Analysis='Completa';IssueType='Qualidade suspeita';DuplicateType='—';SourceFolder='Downloads';FolderDepth='4';Issues='Bitrate abaixo do padrão definido';Location='D:\DJ Library\House\Mabel Costa - Sunday Service.mp3'},
+        [pscustomobject]@{Title='Glass Rooms';Artist='Theo Vale';Album='';Genre='Minimal House';Year='';Bpm='128';Key='2A';Codec='MP3';Bitrate='320';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / After Hours';Analysis='Completa';IssueType='Dados faltantes';DuplicateType='—';SourceFolder='Minimal';FolderDepth='2';Issues='Álbum e ano não informados';Location='D:\DJ Library\Minimal\Theo Vale - Glass Rooms.mp3'},
+        [pscustomobject]@{Title='Soft Focus';Artist='Luma';Album='Soft Focus EP';Genre='Tech House';Year='2025';Bpm='127';Key='7B';Codec='WAV';Bitrate='1411';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Peak Time; Favoritas';Analysis='Completa';IssueType='Duplicada';DuplicateType='Áudio idêntico';SourceFolder='Tech House';FolderDepth='3';Issues='Mesmo áudio encontrado em duas pastas';Location='D:\DJ Library\Tech House\Luma - Soft Focus.wav'},
+        [pscustomobject]@{Title='Afterimage';Artist='Caio Norte';Album='Afterimage';Genre='House';Year='2026';Bpm='125';Key='4A';Codec='AIFF';Bitrate='1411';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Opening';Analysis='Ausente';IssueType='Análise ausente';DuplicateType='—';SourceFolder='House';FolderDepth='2';Issues='Waveform e beatgrid ainda não gerados';Location='D:\DJ Library\House\Caio Norte - Afterimage.aiff'},
+        [pscustomobject]@{Title='Parallel Lines';Artist='Miro';Album='Parallel Lines';Genre='Electro';Year='2024';Bpm='130';Key='11B';Codec='MP3';Bitrate='320';SampleRate='44.1 kHz';PlaylistDisplay='Arquivo / Electro';Analysis='Completa';IssueType='Arquivo ausente';DuplicateType='—';SourceFolder='Arquivo';FolderDepth='3';Issues='O caminho salvo no Rekordbox não foi encontrado';Location='D:\DJ Library\Electro\Miro - Parallel Lines.mp3'}
+    )
+    $RekordboxXmlText.Text='Biblioteca do Rekordbox detectada • modo somente leitura'
+    $RekordboxSummaryText.Text='Escaneamento concluído. Filtre os diagnósticos e revise apenas o que precisa de atenção.'
+    $RekordboxAuditGrid.ItemsSource=$demoAudit
+    $AuditCollectionCount.Text='2.438';$AuditMissingCount.Text='7';$AuditQualityCount.Text='14';$AuditDataCount.Text='32';$AuditDuplicateCount.Text='9'
+    $AuditFilterCombo.SelectedIndex=0;$ExportRekordboxAuditButton.IsEnabled=$true
+    $AuditReadOnlyText.Text='A verificação é somente leitura. Nenhuma alteração é aplicada automaticamente.'
+    $MainTabs.SelectedIndex=2;Update-ContextInformation
+    $StatusText.Text='AUDITORIA • 2.438 TRACKS • 62 PONTOS PARA REVISÃO'
+    Save-MarketingScreenshot '03-auditoria-rekordbox.png'
+
     $window.Close();return
 }
 $window.ShowDialog() | Out-Null
