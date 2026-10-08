@@ -40,40 +40,36 @@ O repositório guarda o código-fonte, testes e documentação. Binários de ter
 
 ![Auditoria da biblioteca do Rekordbox](docs/screenshots/03-auditoria-rekordbox.png)
 
-## O que o CRIVO DJ faz
+## Do link ao Rekordbox
 
-### Workflow completo: baixar → revisar → organizar → Rekordbox
+O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
 
-O CRIVO DJ aceita tracks individuais e playlists do YouTube, SoundCloud e Spotify. Uma playlist é separada em tracks dentro da lista, com capa, título, artista, duração, origem e progresso independentes. Depois do download, as músicas seguem para a organização sem precisar remontar a seleção manualmente.
+Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, arraste o link para a lista. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
 
-Na etapa de organização, o programa monta uma prévia da estrutura de pastas, identifica dados faltantes e permite corrigir manualmente título, artista, álbum, gênero, ano e outros campos antes de aplicar qualquer mudança. Ao concluir, os arquivos ficam organizados no computador e, opcionalmente, são registrados na coleção e em uma playlist do Rekordbox com o nome escolhido no CRIVO.
+Depois do download, **Organizar concluídos** leva as músicas para a próxima etapa. Ali você escolhe como as pastas ficarão, confere os nomes finais e pode corrigir dados faltantes antes de aplicar qualquer mudança. O padrão seguro copia os arquivos e mantém os originais preservados.
 
-```text
-track ou playlist → fila com capas → revisão de dados → organização física → playlist no Rekordbox
-```
+Se a opção **Gravar playlist diretamente no Rekordbox** estiver marcada, o CRIVO cria ou atualiza a playlist escolhida e registra nela as tracks organizadas. Antes de escrever, o programa exige que o Rekordbox esteja fechado, cria um backup e verifica o resultado. Os arquivos de áudio continuam na pasta organizada e o Rekordbox recebe a referência correta para cada um.
 
-O arquivo de áudio permanece no destino organizado; o Rekordbox recebe a referência correta para a track. A integração direta cria backup do banco, usa transação e confere o resultado antes de encerrar.
+> No Spotify, o CRIVO usa os dados da track para localizar uma fonte externa compatível. Ele não extrai o áudio do streaming. Baixe apenas conteúdos que você tenha autorização para usar.
 
-### Somente organizar músicas existentes
+### Organizar músicas que você já possui
 
-O download não é obrigatório. Você pode apontar o CRIVO DJ para qualquer pasta que já contenha sua pesquisa musical, revisar como cada arquivo ficará, editar dados faltantes e organizar por data, gênero, BPM ou uma combinação desses critérios. O modo padrão copia os arquivos e preserva os originais; mover é uma escolha explícita. Essa organização também pode terminar em uma playlist criada diretamente no Rekordbox.
+O download não é obrigatório. Você também pode escolher uma pasta que já contenha sua pesquisa musical, revisar os arquivos, editar dados faltantes e organizar por data, gênero, BPM ou uma combinação desses critérios. Esse fluxo também pode terminar em uma playlist criada diretamente no Rekordbox.
 
-### Auditoria independente da biblioteca
+### Auditoria da biblioteca
 
-A Auditoria funciona como uma ferramenta separada do fluxo de download e organização. Ela lê a biblioteca do Rekordbox em modo somente leitura durante o escaneamento e ajuda a localizar:
+A Auditoria é independente do fluxo de download e organização. Ela verifica a biblioteca do Rekordbox ou um pendrive exportado e ajuda a localizar:
 
 - tracks sem arquivo físico, com caminho inacessível ou fora da coleção;
-- metadados incompletos e possíveis problemas de qualidade;
+- dados incompletos e possíveis problemas de qualidade;
 - tracks sem dados de análise do Rekordbox;
 - duplicatas exatas ou prováveis;
-- arquivos órfãos e inconsistências entre o banco, as pastas e um pendrive exportado;
+- arquivos órfãos e inconsistências entre o banco, as pastas e o pendrive;
 - as playlists e pastas de playlists das quais cada track faz parte.
 
-Os resultados podem ser pesquisados, filtrados e exportados. O escaneamento não corrige nada automaticamente: a revisão e qualquer gravação posterior são decisões explícitas do usuário.
+Os resultados podem ser pesquisados, filtrados e exportados. O escaneamento não corrige nada automaticamente. A revisão e qualquer gravação posterior dependem da sua confirmação.
 
-### Onde entra o Rekordbox
-
-O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekordbox continua responsável pela análise musical definitiva, incluindo waveform, beatgrid, BPM e tonalidade, além da exportação final para pendrives e equipamentos.
+O Rekordbox continua responsável pela análise final de waveform, beatgrid, BPM e tonalidade, além da exportação para pendrives e equipamentos.
 
 ## Recursos
 
@@ -104,20 +100,6 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 - XML e M3U8 mantidos como formatos auxiliares de interoperabilidade e recuperação;
 - relatórios em CSV e JSON, logs em modo simples ou detalhado e exportação de diagnóstico sanitizado;
 - testes automatizados de regressão, interface, stress, auditoria em runtime e escrita do Rekordbox em banco sandbox.
-
-## Do link até o Rekordbox
-
-O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
-
-Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, simplesmente arraste o link para a lista. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
-
-Depois do download, **Organizar concluídos** leva as músicas diretamente para a próxima etapa. Ali você escolhe como as pastas ficarão, confere os nomes finais e pode corrigir dados faltantes antes de aplicar qualquer mudança. O padrão seguro copia os arquivos e mantém os originais preservados.
-
-Se a opção **Gravar playlist diretamente no Rekordbox** estiver marcada, o CRIVO cria ou atualiza a playlist escolhida e registra nela as tracks organizadas. Antes de escrever, o programa exige que o Rekordbox esteja fechado, cria um backup e verifica o resultado. Os arquivos de áudio continuam na pasta organizada; o Rekordbox recebe a referência correta para cada um.
-
-O Rekordbox continua responsável pela análise final de waveform, beatgrid, BPM e tonalidade, além da exportação para pendrives e equipamentos.
-
-> No Spotify, o CRIVO usa os dados da track para localizar uma fonte externa compatível; ele não extrai o áudio do streaming. Baixe apenas conteúdos que você tenha autorização para usar.
 
 ## Buscar dados ausentes
 
