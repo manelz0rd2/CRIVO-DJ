@@ -16,7 +16,7 @@
 
 <p align="center"><strong>CRIVO DJ por MANELZ0RD</strong></p>
 
-Aplicativo portátil para Windows que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar de todo o caminho, do link até uma playlist pronta no Rekordbox. Também pode trabalhar separadamente com uma pasta de músicas que você já possui ou com a auditoria da sua biblioteca.
+Aplicativo portátil para Windows que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar de todo o caminho, do download da música até uma playlist pronta no Rekordbox. Também pode trabalhar separadamente com uma pasta de músicas que você já possui ou com a auditoria da sua biblioteca.
 
 > **Beta fechado:** use sempre cópias ou backups durante os testes. A escrita direta no Rekordbox possui backup, transação e verificação, mas não substitui uma biblioteca bem protegida.
 
@@ -40,9 +40,9 @@ O repositório guarda o código-fonte, testes e documentação. Binários de ter
 
 ![Auditoria da biblioteca do Rekordbox](docs/screenshots/03-auditoria-rekordbox.png)
 
-## Do link ao Rekordbox
+## Do download da música ao Rekordbox
 
-O fluxo principal do CRIVO DJ começa com um link e termina com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
+O fluxo principal do CRIVO DJ pode começar com o download da música e terminar com as tracks organizadas no computador e reunidas em uma playlist do Rekordbox.
 
 Cole uma track ou playlist do YouTube, SoundCloud ou Spotify no campo. Se preferir, arraste o link para a lista. Quando recebe uma playlist, o CRIVO separa o conteúdo em tracks e apresenta cada música com sua própria capa, título, artista, duração e progresso. Nada é baixado antes da sua confirmação.
 
