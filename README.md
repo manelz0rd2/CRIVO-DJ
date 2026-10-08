@@ -96,6 +96,21 @@ O CRIVO DJ prepara, organiza, registra playlists e audita a biblioteca. O Rekord
 - exporta relatórios, mantém histórico e permite desfazer organizações preservadas;
 - funciona de forma portátil no Windows, sem instalação e sem exigir permissão de administrador.
 
+## Recursos técnicos
+
+- interface WPF executada pelo Windows PowerShell 5.1, com launcher próprio em C# e funcionamento portátil;
+- leitura e gravação de tags com TagLibSharp para MP3, WAV, FLAC, AIFF/AIF, M4A, AAC, OGG e WMA;
+- fila de download baseada em yt-dlp, FFmpeg e spotDL, com expansão de playlists, resolução assíncrona de metadata e limite de transferências simultâneas;
+- enriquecimento de metadata pelo MusicBrainz e identificação opcional por fingerprint AcoustID, com cache local, pontuação de confiança e aprovação antes da escrita;
+- motor de organização com simulação prévia, templates de destino, tratamento de conflitos e manifesto reversível para desfazer execuções;
+- detecção de duplicatas por nome, tamanho, metadata semelhante e hash SHA-256;
+- inspeção de qualidade por codec, bitrate, sample rate, bit depth e amostragem de frames MP3 para diferenciar CBR e VBR;
+- integração com o `master.db` do Rekordbox por Pyrekordbox e SQLCipher, com backup datado, transação, reabertura e verificação do resultado;
+- leitura de playlists, associações entre tracks e pastas, arquivos ANLZ e diagnósticos de waveform e beatgrid;
+- XML e M3U8 mantidos como formatos auxiliares de interoperabilidade e recuperação;
+- relatórios em CSV e JSON, logs em modo simples ou detalhado e exportação de diagnóstico sanitizado;
+- testes automatizados de regressão, interface, stress, auditoria em runtime e escrita do Rekordbox em banco sandbox.
+
 ## Baixar músicas e usar o Rekordbox
 
 O CRIVO DJ possui uma fila interna baseada no yt-dlp. Links podem ser arrastados diretamente para o grid ou colados no campo. Ao adicionar, o app consulta título, artista, capa e, quando necessário, separa a playlist em tracks; o download do áudio só começa após **Iniciar download**. Cada linha pode ser marcada ou desmarcada. Antes de baixar, o campo **Salvar tracks em** permite escolher qualquer pasta e guarda essa escolha para o próximo uso. O áudio é processado pelo FFmpeg, recebe a metadata disponibilizada pela fonte e é salvo como MP3 320 kbps; **Organizar concluídos** leva essa pasta ao core do CRIVO DJ. Converter uma fonte de baixa qualidade para 320 kbps não recupera informação perdida. Use o recurso apenas em conteúdos que você tenha autorização para baixar.
