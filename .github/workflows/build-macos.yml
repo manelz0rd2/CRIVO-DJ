@@ -13,7 +13,15 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            package: Apple-Silicon
+          - runner: macos-15-intel
+            package: Intel
+    runs-on: ${{ matrix.runner }}
     defaults:
       run:
         working-directory: macos
@@ -36,11 +44,11 @@ jobs:
         run: |
           codesign --force --deep --sign - "dist/CRIVO DJ.app"
           codesign --verify --deep --strict --verbose=2 "dist/CRIVO DJ.app"
-          ditto -c -k --sequesterRsrc --keepParent "dist/CRIVO DJ.app" "dist/CRIVO-DJ-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "dist/CRIVO DJ.app" "dist/CRIVO-DJ-macOS-${{ matrix.package }}.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: CRIVO-DJ-macOS
-          path: macos/dist/CRIVO-DJ-macOS.zip
+          name: CRIVO-DJ-macOS-${{ matrix.package }}
+          path: macos/dist/CRIVO-DJ-macOS-${{ matrix.package }}.zip
           if-no-files-found: error
           compression-level: 0
 
