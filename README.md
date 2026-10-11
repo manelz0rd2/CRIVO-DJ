@@ -9,6 +9,7 @@
 <p align="center">
   <img alt="Versão" src="https://img.shields.io/badge/versão-0.9.0--beta.1-111111">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-PowerShell%205.1-111111">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-12%2B-111111">
   <img alt="Estado" src="https://img.shields.io/badge/estado-beta%20fechada-6f6b63">
   <img alt="Instalação" src="https://img.shields.io/badge/instalação-portátil-111111">
   <img alt="Validação" src="https://github.com/manelz0rd2/CRIVO-DJ/actions/workflows/validate.yml/badge.svg">
@@ -16,13 +17,21 @@
 
 <p align="center"><strong>CRIVO DJ por MANELZ0RD</strong></p>
 
-Aplicativo portátil para Windows que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar de todo o caminho, do download da música até uma playlist pronta no Rekordbox. Também pode trabalhar separadamente com uma pasta de músicas que você já possui ou com a auditoria da sua biblioteca.
+Aplicativo para Windows e macOS que conecta download de músicas, curadoria, organização e Rekordbox em um fluxo único. O CRIVO DJ pode cuidar de todo o caminho, do download da música até uma playlist pronta no Rekordbox. Também pode trabalhar separadamente com uma pasta de músicas que você já possui ou com a auditoria da sua biblioteca.
 
 > **Beta fechado:** use sempre cópias ou backups durante os testes. A escrita direta no Rekordbox possui backup, transação e verificação, mas não substitui uma biblioteca bem protegida.
 
-## Download
+## Downloads
 
-A versão portátil completa, com as dependências necessárias, é distribuída pela seção [**Releases**](https://github.com/manelz0rd2/CRIVO-DJ/releases). Baixe o ZIP da versão mais recente, extraia em uma pasta comum e abra `CRIVO DJ.exe`. Não é necessário instalar nem executar como administrador.
+Os pacotes completos estão na seção [**Releases**](https://github.com/manelz0rd2/CRIVO-DJ/releases). Escolha o arquivo correspondente ao seu computador:
+
+| Sistema | Baixe este arquivo | Para quem é |
+| --- | --- | --- |
+| Windows | [`CRIVO-DJ-0.9.0-beta.1.zip`](https://github.com/manelz0rd2/CRIVO-DJ/releases/download/v0.9.0-beta.1/CRIVO-DJ-0.9.0-beta.1.zip) | Extraia o ZIP e abra `CRIVO DJ.exe`. Não requer instalação nem administrador. |
+| macOS — Apple Silicon | [`CRIVO-DJ-macOS-Apple-Silicon.zip`](https://github.com/manelz0rd2/CRIVO-DJ/releases/download/v0.9.0-beta.1/CRIVO-DJ-macOS-Apple-Silicon.zip) | Macs com processador da linha M, como M1, M2, M3, M4 ou mais recente. |
+| macOS — Intel | [`CRIVO-DJ-macOS-Intel.zip`](https://github.com/manelz0rd2/CRIVO-DJ/releases/download/v0.9.0-beta.1/CRIVO-DJ-macOS-Intel.zip) | Macs anteriores que mostram “Intel” nas informações do sistema. |
+
+No macOS, extraia o ZIP e abra `CRIVO DJ.app`. Na primeira execução, clique com o botão direito no aplicativo, escolha **Abrir** e confirme. Há somente essas duas versões para Mac: **Apple Silicon**, para processadores M, e **Intel**.
 
 O repositório guarda o código-fonte, testes e documentação. Binários de terceiros e o pacote pronto ficam anexados à Release para manter o histórico Git leve e auditável.
 
@@ -84,11 +93,12 @@ O Rekordbox continua responsável pela análise final de waveform, beatgrid, BPM
 - audita a biblioteca do Rekordbox e pendrives para encontrar arquivos ausentes, qualidade suspeita, dados incompletos, análises ausentes e duplicatas;
 - mostra em quais playlists do Rekordbox cada track aparece;
 - exporta relatórios, mantém histórico e permite desfazer organizações preservadas;
-- funciona de forma portátil no Windows, sem instalação e sem exigir permissão de administrador.
+- está disponível para Windows e macOS; no Mac, há pacotes próprios para processadores M e Intel.
 
 ## Recursos técnicos
 
 - interface WPF executada pelo Windows PowerShell 5.1, com launcher próprio em C# e funcionamento portátil;
+- aplicativo nativo para macOS 12 ou mais recente, com interface PySide6 e pacotes separados para Apple Silicon e Intel;
 - leitura e gravação de tags com TagLibSharp para MP3, WAV, FLAC, AIFF/AIF, M4A, AAC, OGG e WMA;
 - fila de download baseada em yt-dlp, FFmpeg e spotDL, com expansão de playlists, resolução assíncrona de metadata e limite de transferências simultâneas;
 - enriquecimento de metadata pelo MusicBrainz e identificação opcional por fingerprint AcoustID, com cache local, pontuação de confiança e aprovação antes da escrita;

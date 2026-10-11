@@ -3,6 +3,14 @@
 Porte independente do CRIVO DJ para macOS. A versão Windows permanece intacta na pasta
 `CRIVO DJ`.
 
+## Escolha do pacote
+
+- `CRIVO-DJ-macOS-Apple-Silicon.zip`: Macs com processador da linha M, como M1, M2, M3, M4 ou mais recente;
+- `CRIVO-DJ-macOS-Intel.zip`: Macs anteriores com processador Intel.
+
+O usuário final só precisa extrair o ZIP e abrir `CRIVO DJ.app`. Na primeira execução,
+deve clicar com o botão direito no aplicativo, escolher **Abrir** e confirmar.
+
 ## Estado
 
 Esta base já inclui:
