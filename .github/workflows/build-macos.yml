@@ -40,6 +40,12 @@ jobs:
         run: python -m pytest -q
       - name: Montar CRIVO DJ.app
         run: bash scripts/build_macos.sh
+      - name: Abrir o aplicativo empacotado
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          "dist/CRIVO DJ.app/Contents/MacOS/CRIVO DJ" --smoke-test
+          "dist/CRIVO DJ.app/Contents/Resources/crivo-spotdl-helper" --help >/dev/null
       - name: Assinatura ad hoc e pacote
         run: |
           codesign --force --deep --sign - "dist/CRIVO DJ.app"

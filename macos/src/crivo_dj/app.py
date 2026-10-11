@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
@@ -384,11 +384,14 @@ class MainWindow(QMainWindow):
 
 
 def main() -> int:
+    smoke_test = "--smoke-test" in sys.argv
     application = QApplication(sys.argv)
     application.setApplicationName("CRIVO DJ")
     application.setOrganizationName("MANELZ0RD")
     application.setStyleSheet(STYLE)
     window = MainWindow()
     window.show()
+    if smoke_test:
+        QTimer.singleShot(1000, application.quit)
     return application.exec()
 
