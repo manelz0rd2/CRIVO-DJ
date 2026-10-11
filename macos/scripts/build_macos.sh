@@ -37,6 +37,7 @@ python3 -m PyInstaller \
   --onefile \
   --name "crivo-spotdl-helper" \
   --collect-all spotdl \
+  --collect-all pykakasi \
   --collect-all yt_dlp \
   --collect-all imageio_ffmpeg \
   "$ROOT/spotdl_helper.py"
