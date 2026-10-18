@@ -159,7 +159,7 @@ try {
     Assert-True (@($twoWayAudit.Rows|Where-Object{$_.Issues -match 'fora da coleção'}).Count -eq 1) 'a auditoria deve mostrar arquivos que existem no computador e não no Rekordbox'
     $auditPath=Join-Path $testRoot 'auditoria.csv';Export-RekordboxAudit -Audit $rbAudit -Path $auditPath|Out-Null;Assert-True (Test-Path -LiteralPath $auditPath) 'a auditoria Rekordbox deve ser exportável'
     $usbRoot=Join-Path $testRoot 'USB DJ';$usbDb=Join-Path $usbRoot 'PIONEER\rekordbox\export.pdb';$usbAnlz=Join-Path $usbRoot 'PIONEER\USBANLZ\000\ANLZ0000.DAT';$usbAudio=Join-Path $usbRoot 'Contents\metadata.wav'
-    foreach($folder in @((Split-Path -Parent $usbDb),(Split-Path -Parent $usbAnlz),(Split-Path -Parent $usbAudio))){[IO.Directory]::CreateDirectory($folder)|Out-Null};[IO.File]::WriteAllBytes($usbDb,[byte[]](1,2,3));[IO.File]::WriteAllBytes($usbAnlz,[byte[]](1,2,3));[IO.File]::Copy($tagWav,$usbAudio,$true)
+    foreach($folder in @((Split-Path -Parent $usbDb),(Split-Path -Parent $usbAnlz),(Split-Path -Parent $usbAudio))){[IO.Directory]::CreateDirectory($folder)|Out-Null};$validPdbHeader=New-Object byte[] 4096;[BitConverter]::GetBytes([uint32]4096).CopyTo($validPdbHeader,4);[BitConverter]::GetBytes([uint32]20).CopyTo($validPdbHeader,8);[BitConverter]::GetBytes([uint32]1).CopyTo($validPdbHeader,12);[IO.File]::WriteAllBytes($usbDb,$validPdbHeader);[IO.File]::WriteAllBytes($usbAnlz,[byte[]](1,2,3));[IO.File]::Copy($tagWav,$usbAudio,$true)
     $usbAudit=Get-RekordboxUsbAudit -Root $usbRoot -Settings $settings
     Assert-True ($usbAudit.Total -eq 1 -and $usbAudit.StructureIssues -eq 0 -and $usbAudit.AnalysisFileCount -eq 1) 'a auditoria de pendrive deve validar áudio, banco e arquivos de análise'
     $m3uPath=Join-Path $testRoot 'playlist.m3u8';Export-RekordboxPlaylistM3U8 -Library $rbLibrary -PlaylistPath 'ROOT / CRIVO DJ — Organizado' -Path $m3uPath|Out-Null;Assert-True ((Get-Content -LiteralPath $m3uPath -Raw) -match 'download.mp3') 'uma playlist Rekordbox deve ser exportável em M3U8'
@@ -227,7 +227,10 @@ try {
     $fakeDownload.Status='Baixando';$fakeDownload|Add-Member NoteProperty FallbackAttempted $true -Force;$fakeDownload|Add-Member NoteProperty OriginalFailure 'Fonte original recusou o áudio' -Force
     $fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
     Assert-True ($fakeDownload.Status -eq 'Falhou' -and $fakeDownload.Detail -match 'busca alternativa') 'a falha após fallback deve explicar as duas tentativas ao usuário'
-    $downloadedFile=Join-Path $fakeDownload.OutputFolder 'ok.mp3';[IO.File]::WriteAllBytes($downloadedFile,[byte[]](7,7,7))
+    $tinyFile=Join-Path $fakeDownload.OutputFolder 'tiny.mp3';[IO.File]::WriteAllBytes($tinyFile,[byte[]](7,7,7));[IO.File]::WriteAllText($emptyOut,"ODT_FILE|$tinyFile")
+    $fakeDownload.Status='Baixando';$fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
+    Assert-True ($fakeDownload.Status -eq 'Falhou') 'um fragmento pequeno demais não pode ser marcado como download concluído'
+    $downloadedFile=Join-Path $fakeDownload.OutputFolder 'ok.mp3';[IO.File]::WriteAllBytes($downloadedFile,(New-Object byte[] 65536))
     [IO.File]::WriteAllText($emptyOut,"ODT_FILE|$downloadedFile")
     $fakeDownload.Status='Baixando';$fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
     Assert-True ($fakeDownload.Status -eq 'Concluido' -and $fakeDownload.ProgressValue -eq 100 -and $fakeDownload.FinalPath -eq $downloadedFile) 'um arquivo final confirmado deve concluir o download em 100%'
@@ -258,10 +261,14 @@ try {
     Assert-True ($fallbackTracks.Count -eq 1 -and $fallbackTracks[0].Status -eq 'Pronto' -and $fallbackTracks[0].DownloadUrl -match '^ytsearch1:' -and $fallbackTracks[0].Source -eq 'example.invalid') 'uma track individual indisponível deve ser preparada para busca alternativa sem perder a fonte original'
 
     $spotifySave=Join-Path $testRoot 'spotify.spotdl';[IO.File]::WriteAllText($spotifySave,'[{"name":"Spotify Track","artists":["DJ Spotify"],"duration":180,"cover":"https://example.invalid/spotify.jpg","url":"https://open.spotify.com/track/test"}]')
+    $localizedSpotify='https://open.spotify.com/intl-pt/track/3J7lbUVJhtphRgnS1b9xzc?si=41675d00875f4c67'
+    Assert-True ((ConvertTo-ODTSpotifyCanonicalUrl -Url $localizedSpotify) -eq 'https://open.spotify.com/track/3J7lbUVJhtphRgnS1b9xzc') 'links regionais do Spotify devem ser normalizados antes da resolução'
+    Assert-True ((ConvertTo-ODTSpotifyCanonicalUrl -Url 'https://open.spotify.com/intl-en-us/playlist/abc123?si=x') -eq 'https://open.spotify.com/playlist/abc123') 'a normalização deve aceitar outros idiomas sem ficar presa ao português'
     $spotifyResolver=[pscustomobject]@{Kind='SpotifyResolver';Title='Lendo';Source='Spotify';Url='https://open.spotify.com/track/test';Quality='MP3 320 kbps';QualityCode='320';Status='Analisando';Progress='0%';ProgressValue=0;Detail='';Process=$fakeResolverProcess;StdOutPath=$resolverOut;StdErrPath=$resolverErr;SaveFile=$spotifySave;OutputFolder=$fakeDownload.OutputFolder;StartedAt=Get-Date;TimeoutSeconds=30;FinishedAt=$null;Expanded=$false}
     [IO.File]::WriteAllText($resolverOut,'');[IO.File]::WriteAllText($resolverErr,'')
     $spotifyTracks=@(Complete-ODTSpotifyResolver -Resolver $spotifyResolver)
     Assert-True ($spotifyTracks.Count -eq 1 -and $spotifyTracks[0].Artist -eq 'DJ Spotify' -and $spotifyTracks[0].Thumbnail -match 'spotify.jpg') 'o Spotify deve aceitar artistas e capa mesmo com campos opcionais ausentes'
+    Assert-True ($spotifyTracks[0].SpotifySourceUrl -eq 'https://open.spotify.com/track/test' -and $spotifyTracks[0].DownloadUrl -notmatch '^ytsearch') 'uma track do Spotify deve passar pelo resolvedor com várias fontes, sem baixar cegamente o primeiro resultado de busca'
 
     [IO.File]::WriteAllText($resolverOut,'{"entries":[]}');$fakeResolver.Status='Analisando';$fakeResolver.StartedAt=Get-Date;$fakeResolver.FinishedAt=$null
     $resolvedEmpty=@(Complete-ODTPlaylistResolver -Resolver $fakeResolver)
@@ -287,6 +294,7 @@ try {
     $waitingProcess=[pscustomobject]@{HasExited=$false;ExitCode=0};$waitingProcess|Add-Member ScriptMethod Refresh {} -Force
     $waitingResolver=[pscustomobject]@{Kind='PlaylistResolver';Title='Lendo';Source='soundcloud.com';Url='https://example.invalid/waiting';Quality='MP3 320 kbps';QualityCode='320';Status='Analisando';Progress='0%';ProgressValue=0;Detail='';Process=$waitingProcess;StdOutPath=$resolverOut;StdErrPath=$resolverErr;OutputFolder=$fakeDownload.OutputFolder;StartedAt=Get-Date;TimeoutSeconds=30;FinishedAt=$null}
     [object[]]$waitingResult=if($waitingResolver.Kind -eq 'SpotifyResolver'){@(Complete-ODTSpotifyResolver -Resolver $waitingResolver)}else{@(Complete-ODTPlaylistResolver -Resolver $waitingResolver)}
+    [object[]]$waitingResult=@($waitingResult|Where-Object{$null -ne $_})
     Assert-True (@($waitingResult).Count -eq 0 -and $waitingResolver.Status -eq 'Analisando') 'um resolvedor ativo deve manter a fila rodando sem resultado prematuro'
 
     # Contrato visual: cada botão nomeado no XAML precisa estar ligado a um handler.

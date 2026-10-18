@@ -46,4 +46,23 @@ function Get-RelativePathSafe {
     }
 }
 
-Export-ModuleMember -Function Get-AppRoot, Get-AppDataRoot, Read-JsonFile, Write-JsonFile, ConvertTo-SafePathPart, Get-RelativePathSafe
+function Import-PortableAssembly {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$TypeName=''
+    )
+    if($TypeName -and ($TypeName -as [type])){return $true}
+    if(-not(Test-Path -LiteralPath $Path -PathType Leaf)){throw "Componente necessário não encontrado: $Path"}
+    try {
+        # Carregar pelos bytes evita o bloqueio 0x80131515 aplicado pelo
+        # Windows a DLLs extraídas de um ZIP baixado da internet. A DLL segue
+        # sendo a cópia empacotada e controlada pelo próprio CRIVO.
+        [void][Reflection.Assembly]::Load([IO.File]::ReadAllBytes($Path))
+    } catch {
+        try { Add-Type -Path $Path -ErrorAction Stop } catch { throw "Não foi possível carregar um componente do CRIVO. Extraia novamente o pacote completo. Detalhe: $($_.Exception.Message)" }
+    }
+    if($TypeName -and -not($TypeName -as [type])){throw "O componente foi carregado, mas não disponibilizou $TypeName."}
+    return $true
+}
+
+Export-ModuleMember -Function Get-AppRoot, Get-AppDataRoot, Read-JsonFile, Write-JsonFile, ConvertTo-SafePathPart, Get-RelativePathSafe, Import-PortableAssembly

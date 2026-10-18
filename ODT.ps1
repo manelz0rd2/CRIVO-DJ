@@ -137,7 +137,7 @@ public static class OdtFolderPicker {
 }
 '@
 }
-foreach ($module in @('Common','Metadata','Scanner','Duplicates','History','Organizer','Enrichment','Inbox','Downloader','Rekordbox')) {
+foreach ($module in @('Common','Metadata','Scanner','Duplicates','History','Organizer','Enrichment','Inbox','Downloader','Rekordbox','UsbHealth','EquipmentCompatibility','UsbBackup','UsbRecovery')) {
     Import-Module (Join-Path $AppRoot "Modules\$module.psm1") -Force
 }
 Import-Module (Join-Path $AppRoot 'Modules\Common.psm1') -Force
@@ -165,6 +165,10 @@ $script:RekordboxLibraryAudit = $null
 $script:RekordboxUsbAudit = $null
 $script:AuditMode = 'Library'
 $script:AuditTracks = @()
+$script:UsbHealthReport = $null
+$script:UsbRecoveryPlan = $null
+$script:UsbCompatibilityReport = $null
+$script:UsbBackupPlan = $null
 $script:DownloadQueue = New-Object Collections.ObjectModel.ObservableCollection[object]
 $script:DownloadFolderTrackCount = 0
 $script:DownloadStartRequested = $false
@@ -197,8 +201,11 @@ $controlNames = @(
     'RekordboxXmlText','ChooseRekordboxXmlButton','AuditRekordboxButton','RekordboxSummaryText','RekordboxAuditGrid','ExportRekordboxAuditButton','EditAuditMetadataButton','ReviewAuditButton',
     'AuditLibraryModeButton','AuditUsbModeButton','AuditLibrarySourcePanel','AuditUsbSourcePanel','AuditUsbPathText','ChooseAuditUsbButton','AuditUsbButton','AuditReadOnlyText',
     'AuditCollectionCount','AuditMissingCount','AuditQualityCount','AuditDataCount','AuditDuplicateCount','AuditTotalLabel','AuditMissingLabel','AuditQualityLabel','AuditDataLabel','AuditDuplicateLabel','AuditSearchText','AuditFilterCombo',
+    'ToolkitRoot','ToolkitSubTabs','ToolkitUsbPathText','ToolkitChooseUsbButton','ToolkitScanUsbButton','ToolkitProblemCount','ToolkitAttentionCount','ToolkitUnknownCount','ToolkitOverallText','ToolkitChecksGrid','ToolkitLimitText','ToolkitExportButton','ToolkitFirstAidButton',
+    'EquipmentProfileCombo','ToolkitCompatibilityButton','ToolkitCompatibilityStatus','CompatibilityChecksGrid','CompatibilitySourceText','ToolkitOpenEquipmentSourceButton',
+    'ToolkitBackupDestinationText','ToolkitChooseBackupDestinationButton','ToolkitBackupSummaryText','ToolkitBackupResultText','ToolkitCreateBackupButton','ToolkitRecoveryStatusText',
     'TotalCount','ReadyCount','NoGenreCount','DuplicateCount','GenreCounter1','GenreCounter2','GenreCounter3','GenreLabel1','GenreLabel2','GenreLabel3','SearchText','OrganizerListFilterCombo','PreviewGrid','PlanSummary','Progress','EditTrackMetadataButton',
-    'ApplyButton','UndoButton','OpenHistoryButton','StatusText'
+    'ApplyButton','SupportCrivoButton','UndoButton','OpenHistoryButton','StatusText'
 )
 foreach ($name in $controlNames) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
 
@@ -258,6 +265,48 @@ function Show-CrivoConfirm {
     return (Show-CrivoDialog -Message $Message -Title $Title -PrimaryText $ConfirmText -SecondaryText $CancelText -Question)
 }
 
+function Show-SupportCrivoDialog {
+    $qrPath=Join-Path $AppRoot 'Assets\Support-Pix-QR.png'
+    [xml]$supportXaml=@'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Width="620" Height="700" WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Background="#171613" FontFamily="Segoe UI" Foreground="#171613">
+  <Border BorderBrush="#171613" BorderThickness="1" Background="#D5D1C8">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="*"/><RowDefinition Height="62"/></Grid.RowDefinitions>
+      <Grid x:Name="Header" Background="#171613">
+        <TextBlock Text="APOIE O CRIVO" Foreground="#F2F0EA" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Margin="16,0,50,0"/>
+        <Button x:Name="CloseButton" Content="×" Width="44" Height="43" Padding="0" HorizontalAlignment="Right" Background="#171613" Foreground="#F2F0EA" BorderThickness="0" FontSize="18"/>
+      </Grid>
+      <StackPanel Grid.Row="1" Margin="24,22,24,14">
+        <TextBlock Text="AJUDE A MELHORAR O CRIVO DJ" FontSize="18" FontWeight="Bold"/>
+        <TextBlock Text="Envie feedbacks, erros encontrados e sugestões de ajustes." Foreground="#57534C" FontSize="11" Margin="0,5,0,16"/>
+        <Border Background="#E5E2DA" BorderBrush="#969188" BorderThickness="1" Padding="14,11">
+          <StackPanel><TextBlock Text="E-MAIL" FontSize="9" FontWeight="Bold"/><TextBlock Text="emanuel.pereira.fraga@gmail.com" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+        </Border>
+        <TextBlock Text="PIX PARA APOIO:" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,20,0,10"/>
+        <Border Width="316" Height="316" HorizontalAlignment="Center" Background="#FFFFFF" BorderBrush="#171613" BorderThickness="3" ClipToBounds="True">
+          <Canvas Width="316" Height="316" ClipToBounds="True"><Image x:Name="QrImage" Width="410" Height="889" Canvas.Left="-55" Canvas.Top="-206" Stretch="Fill"/></Canvas>
+        </Border>
+        <TextBlock Text="Aponte a câmera do celular para o QR Code." Foreground="#57534C" FontSize="10" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+      </StackPanel>
+      <Grid Grid.Row="2" Margin="24,10,24,16">
+        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Button x:Name="EmailButton" Content="ENVIAR E-MAIL" Height="36" Background="#C5C1B8" Foreground="#171613" BorderBrush="#77726A" FontWeight="Bold"/>
+        <Button x:Name="DoneButton" Grid.Column="2" Content="FECHAR" Height="36" Background="#171613" Foreground="#F2F0EA" BorderBrush="#171613" FontWeight="Bold"/>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
+'@
+    $reader=New-Object System.Xml.XmlNodeReader $supportXaml
+    $dialog=[Windows.Markup.XamlReader]::Load($reader);if($window -and $window.IsLoaded){$dialog.Owner=$window};if($window.Icon){$dialog.Icon=$window.Icon}
+    if(Test-Path -LiteralPath $qrPath){$bitmap=New-Object Windows.Media.Imaging.BitmapImage;$bitmap.BeginInit();$bitmap.CacheOption=[Windows.Media.Imaging.BitmapCacheOption]::OnLoad;$bitmap.UriSource=[Uri]::new($qrPath,[UriKind]::Absolute);$bitmap.EndInit();$bitmap.Freeze();$dialog.FindName('QrImage').Source=$bitmap}
+    $dialog.FindName('Header').Add_MouseLeftButtonDown({if($_.ClickCount -eq 1){try{$dialog.DragMove()}catch{}}})
+    $dialog.FindName('CloseButton').Add_Click({$dialog.Close()})
+    $dialog.FindName('DoneButton').Add_Click({$dialog.Close()})
+    $dialog.FindName('EmailButton').Add_Click({try{Start-Process 'mailto:emanuel.pereira.fraga@gmail.com?subject=Feedback%20CRIVO%20DJ'}catch{Show-Message 'E-mail: emanuel.pereira.fraga@gmail.com' 'Apoie o CRIVO'}})
+    [void]$dialog.ShowDialog()
+}
+
 function Set-CrivoFormStyle {
     param([Parameter(Mandatory)][Windows.Forms.Form]$Form,[string]$Title='CRIVO DJ')
     $existing=@($Form.Controls);$Form.Controls.Clear();$Form.FormBorderStyle='None';$Form.Padding=New-Object Windows.Forms.Padding(1);$Form.BackColor=[Drawing.Color]::FromArgb(23,22,19)
@@ -275,6 +324,17 @@ function Set-Status {
     $StatusText.Text = $Text
     if ($Percent -ge 0) { $Progress.Value = $Percent }
     Pump-Ui
+}
+
+function New-UiProgressAction {
+    param([Parameter(Mandatory)][scriptblock]$Message,[Parameter(Mandatory)][scriptblock]$Percent)
+    $statusControl=$StatusText;$progressControl=$Progress;$dispatcher=[Windows.Threading.Dispatcher]::CurrentDispatcher
+    return {
+        param($current,$total,$name,$phase)
+        $statusControl.Text=[string](& $Message $current $total $name $phase)
+        $progressControl.Value=[int](& $Percent $current $total $name $phase)
+        $dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
+    }.GetNewClosure()
 }
 
 function Get-SelectedTag {
@@ -447,10 +507,7 @@ function Scan-SelectedFolder {
     if (-not (Test-Path -LiteralPath $source -PathType Container)) { return $false }
     try {
         $ChooseFolderButton.IsEnabled = $false; $ApplyButton.IsEnabled = $false; $EditTrackMetadataButton.IsEnabled=$false
-        $progressAction = {
-            param($current,$total,$name)
-            Set-Status "Lendo $name ($current de $total)" $(if($total){[int](($current/$total)*100)}else{0})
-        }
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name) "Lendo $name ($current de $total)"} -Percent {param($current,$total) if($total){[int](($current/$total)*100)}else{0}}
         $script:Tracks = @(Get-AudioFiles -Source $source -Settings $script:Settings -IncludeHash:$IncludeHash -OnlyAudio:([bool]$OnlyAudioCheck.IsChecked) -OnProgress $progressAction)
         $PreviewGrid.ItemsSource = $script:Tracks
         Update-Duplicates
@@ -525,16 +582,27 @@ function Invoke-CurrentPlan {
     if (-not(Show-CrivoConfirm -Message "Confirmar e $verb $(@($script:Plan.Items | Where-Object Status -eq 'Ready').Count) track(s)?$rekordboxWarning" -Title 'Confirmar organização' -ConfirmText 'ORGANIZAR')) { return }
     try {
         $ChooseFolderButton.IsEnabled=$false; $ApplyButton.IsEnabled=$false
-        $progressAction = { param($current,$total,$name) Set-Status "Organizando $name ($current de $total)" ([int](($current/[Math]::Max(1,$total))*100)) }
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name) "Organizando $name ($current de $total)"} -Percent {param($current,$total) [int](($current/[Math]::Max(1,$total))*100)}
         $result = Invoke-OrganizationPlan -Plan $script:Plan -OnProgress $progressAction
-        Set-Status 'Organização concluída' 100; Refresh-UndoState
+        Refresh-UndoState
         $extra = ''; if ($result.ReportPath) { $extra += "`nRelatório: $($result.ReportPath)" }; if ($result.HistoryPath) { $extra += "`nPonto de restauração criado." }
         if($SendRekordboxCheck.IsChecked){try{$rb=Export-OrganizedPlanToRekordbox -Plan $script:Plan -Operation $result.Operation;if($rb){$needsAnalysis=if($rb.Import.PSObject.Properties['tracksNeedingAnalysis']){[int]$rb.Import.tracksNeedingAnalysis}else{0};$analysisText=if($needsAnalysis -gt 0){"`n$needsAnalysis track(s) aguardam a análise oficial do Rekordbox (waveform e beatgrid)."}else{"`nAs tracks já possuem análise do Rekordbox."};$extra+="`nPlaylist Rekordbox '$($rb.PlaylistName)' gravada diretamente e verificada ($($rb.Count) tracks).$analysisText`nBackup: $($rb.Import.BackupPath)"}}catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;$extra+="`nFalha na gravação direta do Rekordbox: $($_.Exception.Message)"}}
         $completedCount=$result.Success;$skippedCount=if($result.PSObject.Properties['Skipped']){[int]$result.Skipped}else{0}
         [void](Scan-SelectedFolder);$script:Plan=$null;$ApplyButton.IsEnabled=$false
-        $PlanSummary.Text="Organização concluída • $completedCount track(s) processada(s) • $skippedCount ignorada(s) • $($result.Errors) erro(s)"
-        Set-Status 'Organização concluída. Lista atualizada.' 100
-        Show-Message "Organização concluída.`n`nProcessadas: $completedCount`nIgnoradas: $skippedCount`nErros: $($result.Errors)$extra" 'Tudo pronto';Update-ContextInformation
+        if([int]$result.Errors -gt 0){
+            $PlanSummary.Text="Organização concluída com atenção • $completedCount track(s) processada(s) • $skippedCount ignorada(s) • $($result.Errors) erro(s)"
+            Set-Status 'Organização terminou com erros. Revise o resultado.' 100
+            Show-Message "A organização terminou, mas nem tudo foi concluído.`n`nProcessadas: $completedCount`nIgnoradas: $skippedCount`nErros: $($result.Errors)$extra" 'Organização concluída com atenção' Warning
+        }elseif($completedCount -gt 0){
+            $PlanSummary.Text="Organização concluída • $completedCount track(s) processada(s) • $skippedCount ignorada(s) • nenhum erro"
+            Set-Status 'Organização concluída. Lista atualizada.' 100
+            Show-Message "Organização concluída.`n`nProcessadas: $completedCount`nIgnoradas: $skippedCount`nErros: 0$extra" 'Tudo pronto'
+        }else{
+            $PlanSummary.Text="Nenhuma track foi processada • $skippedCount ignorada(s)"
+            Set-Status 'Nenhuma track foi organizada.' 0
+            Show-Message "Nenhuma track foi organizada.`n`nIgnoradas: $skippedCount" 'Nada foi alterado' Warning
+        }
+        Update-ContextInformation
     } catch {
         Write-AppLog -Message $_.Exception.ToString() -Level ERROR
         Show-Message $_.Exception.Message 'Erro durante a organização' Error
@@ -607,7 +675,11 @@ function Open-ODTInbox {
 
 function Import-ODTInbox {
     $path=Get-ODTDownloadPath;[IO.Directory]::CreateDirectory($path)|Out-Null;$files=@(Get-ChildItem -LiteralPath $path -File -ErrorAction SilentlyContinue|Where-Object Extension -in @('.mp3','.wav','.flac','.aiff','.aif','.m4a','.aac','.ogg','.wma'))
-    if(-not$files.Count){Show-Message "A Inbox está vazia.`n`nBaixe ou copie as faixas para:`n$path" 'Inbox de downloads';return $false}
+    if(-not$files.Count){
+        $otherFolders=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Concluido' -and $_.PSObject.Properties['FinalPath'] -and $_.FinalPath -and (Test-Path -LiteralPath $_.FinalPath -PathType Leaf)}|ForEach-Object{Split-Path -Parent ([string]$_.FinalPath)}|Where-Object{$_ -and $_ -ne $path}|Select-Object -Unique)
+        $where=if($otherFolders.Count){"`n`nHá downloads concluídos em outro destino:`n"+($otherFolders -join "`n")+"`n`nAltere a pasta acima ou baixe novamente para o destino atual."}else{"`n`nBaixe ou copie as faixas para:`n$path"}
+        Show-Message ("Nenhuma track de áudio foi encontrada no destino selecionado:$([Environment]::NewLine)$path"+$where) 'Inbox de downloads';return $false
+    }
     Load-SourceFolder -Path $path;return $true
 }
 
@@ -638,6 +710,10 @@ function Update-ContextInformation {
             if($script:RekordboxAudit){$StatusText.Text="AUDITORIA • $($script:RekordboxAudit.Total) TRACK(S) • $($script:RekordboxAudit.Problems) PROBLEMA(S) ENCONTRADO(S)"}
             elseif($script:AuditMode -eq 'Usb'){$StatusText.Text='AUDITORIA • ESCOLHA O PENDRIVE E CLIQUE EM VERIFICAR'}
             else{$StatusText.Text='AUDITORIA • CLIQUE EM ESCANEAR BIBLIOTECA'}
+        }
+        3 {
+            if($script:UsbHealthReport){$StatusText.Text="KIT DE FERRAMENTAS USB • $($script:UsbHealthReport.Overall.ToUpperInvariant())"}
+            else{$StatusText.Text='KIT DE FERRAMENTAS USB • ESCOLHA UM DISPOSITIVO PARA O DIAGNÓSTICO SOMENTE LEITURA'}
         }
     }
 }
@@ -675,7 +751,7 @@ function Get-ODTEnvironmentChecks {
     $rbCandidates=@($configured,"$env:ProgramFiles\rekordbox\rekordbox.exe","$env:ProgramFiles\Pioneer\rekordbox 7\rekordbox.exe","$env:ProgramFiles\AlphaTheta\rekordbox 7\rekordbox.exe","${env:ProgramFiles(x86)}\Pioneer\rekordbox\rekordbox.exe")
     $rbExe=@($rbCandidates|Where-Object{$_ -and (Test-Path -LiteralPath $_ -PathType Leaf)}|Select-Object -First 1);$checks.Add([pscustomobject]@{Name='Rekordbox';Ok=[bool]$rbExe.Count;Required=$false;Detail=$(if($rbExe.Count){'executável encontrado'}else{'opcional: não localizado'})})
     try{$database=Get-RekordboxDatabasePath;$databaseOk=Test-Path -LiteralPath $database -PathType Leaf}catch{$databaseOk=$false};$checks.Add([pscustomobject]@{Name='Banco do Rekordbox';Ok=[bool]$databaseOk;Required=$false;Detail=$(if($databaseOk){'base encontrada'}else{'opcional: base não localizada'})})
-    if($IncludeInternet){$internetOk=$false;try{$response=Invoke-WebRequest -UseBasicParsing -Uri 'https://musicbrainz.org/ws/2/' -Headers @{'User-Agent'='CRIVO-DJ/0.9.9'} -TimeoutSec 8;$internetOk=[bool]$response}catch{$internetOk=[bool]$_.Exception.PSObject.Properties['Response']};$checks.Add([pscustomobject]@{Name='Internet';Ok=$internetOk;Required=$true;Detail=$(if($internetOk){'conexão disponível'}else{'sem resposta'})})}
+    if($IncludeInternet){$internetOk=$false;try{$response=Invoke-WebRequest -UseBasicParsing -Uri 'https://musicbrainz.org/ws/2/' -Headers @{'User-Agent'='CRIVO-DJ/0.9 closed-beta'} -TimeoutSec 8;$internetOk=[bool]$response}catch{$internetOk=[bool]$_.Exception.PSObject.Properties['Response']};$checks.Add([pscustomobject]@{Name='Internet';Ok=$internetOk;Required=$true;Detail=$(if($internetOk){'conexão disponível'}else{'sem resposta'})})}
     return $checks.ToArray()
 }
 
@@ -702,7 +778,9 @@ function Export-ODTDiagnostic {
         $safeSettings=[ordered]@{DuplicateLevel=[string]$script:Settings.DuplicateLevel;MissingMetadataPolicy=[string]$script:Settings.MissingMetadataPolicy;LogLevel=[string]$script:Settings.LogLevel;AudioExtensions=@($script:Settings.AudioExtensions);Quality=$script:Settings.Quality;InternetMetadata=[ordered]@{Enabled=[bool]$script:Settings.InternetMetadata.Enabled;Provider=[string]$script:Settings.InternetMetadata.Provider;MinimumConfidence=[int]$script:Settings.InternetMetadata.MinimumConfidence;HasAcoustIdKey=[bool](-not[string]::IsNullOrWhiteSpace([string]$script:Settings.InternetMetadata.AcoustIdClientKey))};Paths='omitidos por privacidade'}
         Write-JsonFile -Path (Join-Path $tempRoot 'settings-sanitized.json') -Value $safeSettings
         $logFolder=Join-Path (Get-AppDataRoot) 'Logs';foreach($log in @(Get-ChildItem -LiteralPath $logFolder -File -Filter '*.log' -ErrorAction SilentlyContinue|Sort-Object LastWriteTime -Descending|Select-Object -First 2)){$text=[IO.File]::ReadAllText($log.FullName);if($env:USERPROFILE){$text=$text.Replace($env:USERPROFILE,'%USERPROFILE%')};$text=[regex]::Replace($text,'(?i)(/s-)[A-Za-z0-9]+','$1REDACTED');$text=[regex]::Replace($text,'(?i)(https?://[^\s?]+)\?[^\s]+','$1?[PARÂMETROS_REMOVIDOS]');[IO.File]::WriteAllText((Join-Path $tempRoot $log.Name),$text,[Text.UTF8Encoding]::new($false))}
-        Compress-Archive -Path (Join-Path $tempRoot '*') -DestinationPath $dialog.FileName -CompressionLevel Optimal -Force;Show-Message "Diagnóstico exportado sem caminhos pessoais ou chaves:`n$($dialog.FileName)" 'Diagnóstico pronto'
+        Compress-Archive -Path (Join-Path $tempRoot '*') -DestinationPath $dialog.FileName -CompressionLevel Optimal -Force
+        if(-not(Test-Path -LiteralPath $dialog.FileName -PathType Leaf) -or (Get-Item -LiteralPath $dialog.FileName).Length -le 0){throw 'O arquivo de diagnóstico não foi criado no destino escolhido.'}
+        Show-Message "Diagnóstico exportado e conferido sem caminhos pessoais ou chaves:`n$($dialog.FileName)" 'Diagnóstico pronto'
     }catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao exportar diagnóstico' Error}finally{if(Test-Path -LiteralPath $tempRoot -PathType Container){[IO.Directory]::Delete($tempRoot,$true)}}
 }
 
@@ -715,7 +793,7 @@ function Add-DownloadLinksToGrid {
         $exists=$false;foreach($queued in $script:DownloadQueue){if($queued.PSObject.Properties['Url'] -and [string]$queued.Url -eq $url){$exists=$true;break}}
         if($exists){continue}
         try{
-            $isSpotify=$url -match '^https?://(open\.)?spotify\.com/';$isSingleSpotify=$url -match '^https?://(open\.)?spotify\.com/track/';$isYouTubeTrack=$url -match '(youtube\.com/watch\?|youtu\.be/)';$isSoundCloudUserPage=$url -match '^https?://(?:www\.)?soundcloud\.com/[\w-]+/?(?:[?#].*)?$';$isPlaylist=(-not$isYouTubeTrack -and $url -match '([?&]list=|/playlist(?:s)?/|/sets?/|/albums?/|/mix(?:es)?/|/collection/|/tracklist/|/shows?/|/channels?/|/series/|/feed/)') -or $isSoundCloudUserPage;$singleTrack=(-not$isPlaylist)
+            $isSpotify=$url -match '^https?://(open\.)?spotify\.com/';$isSingleSpotify=$url -match '^https?://(open\.)?spotify\.com/(?:intl-[a-z]{2}(?:-[a-z]{2})?/)?track/';$isYouTubeTrack=$url -match '(youtube\.com/watch\?|youtu\.be/)';$isSoundCloudUserPage=$url -match '^https?://(?:www\.)?soundcloud\.com/[\w-]+/?(?:[?#].*)?$';$isPlaylist=(-not$isYouTubeTrack -and $url -match '([?&]list=|/playlist(?:s)?/|/sets?/|/albums?/|/mix(?:es)?/|/collection/|/tracklist/|/shows?/|/channels?/|/series/|/feed/)') -or $isSoundCloudUserPage;$singleTrack=(-not$isPlaylist)
             $resolver=if($isSpotify) { Start-ODTSpotifyResolver -Url $url -OutputRoot $root -EnginePath $spotifyEngine -FFmpegPath $ffmpeg -Quality '320' } else { Start-ODTPlaylistResolver -Url $url -OutputRoot $root -EnginePath $engine -Quality '320' -SingleTrack:$singleTrack }
             if($isSingleSpotify -or -not$isPlaylist){$resolver.Title='Lendo dados da track...';$resolver.Detail='Buscando título, artista e capa';$resolver.TimeoutSeconds=90}elseif($url -match '(?i)/discover/sets/personalized-tracks'){$resolver.Title='Lendo playlist personalizada...';$resolver.Detail='Usando a sessão local do navegador para separar as tracks'}else{$resolver.Title='Lendo playlist...';$resolver.Detail='Separando a playlist em tracks'}
             $script:DownloadQueue.Add($resolver);$added++
@@ -729,12 +807,29 @@ function Add-DownloadLinksToGrid {
 }
 
 function Start-DownloadUrls {
-    try{[void](Add-DownloadLinksToGrid -Text $DownloadUrlText.Text);$DownloadUrlText.Clear();$ready=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Pronto' -and $_.IsSelected});$analyzing=@($script:DownloadQueue|Where-Object{$_.Status -in @('Analisando','Expandindo')}).Count
+    try{[void](Add-DownloadLinksToGrid -Text $DownloadUrlText.Text);$DownloadUrlText.Clear();$currentRoot=Get-ODTDownloadPath
+        if(-not(Test-Path -LiteralPath $currentRoot -PathType Container)){[IO.Directory]::CreateDirectory($currentRoot)|Out-Null}
+        # O destino pode ser trocado depois que os links entram na lista. Tudo
+        # que ainda não começou deve acompanhar o caminho exibido na tela.
+        foreach($queued in $script:DownloadQueue){if($queued.Status -in @('Pronto','Pendente','Analisando','Expandindo')){if($queued.PSObject.Properties['OutputFolder']){$queued.OutputFolder=$currentRoot}else{$queued|Add-Member NoteProperty OutputFolder $currentRoot}}}
+        $ready=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Pronto' -and $_.IsSelected});$analyzing=@($script:DownloadQueue|Where-Object{$_.Status -in @('Analisando','Expandindo')}).Count
         if(-not$ready.Count -and -not$analyzing){$script:DownloadStartRequested=$false;Show-Message 'Marque na lista pelo menos uma track pronta para baixar.' 'Baixar tracks';return}
         $script:DownloadStartRequested=$true
         foreach($request in $ready){$request.QualityCode='320';$request.Quality='MP3 320 kbps';$request.Status='Pendente';$request.Progress='0%';$request.ProgressValue=0;$request.Detail='Aguardando vaga para baixar'}
         $DownloadQueueGrid.Items.Refresh();$DownloadStatusText.Text=$(if($analyzing){'Análise em andamento; as tracks selecionadas iniciarão assim que os dados chegarem.'}else{"$($ready.Count) track(s) adicionada(s) à fila de download."});$script:DownloadTimer.Start()
     }catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Não foi possível adicionar o link' Error}
+}
+
+function Sync-PendingDownloadDestination {
+    param([Parameter(Mandatory)][string]$Path)
+    $updated=0
+    foreach($queued in $script:DownloadQueue){
+        if($queued.Status -notin @('Pronto','Pendente','Analisando','Expandindo')){continue}
+        if($queued.PSObject.Properties['OutputFolder']){$queued.OutputFolder=$Path}else{$queued|Add-Member NoteProperty OutputFolder $Path}
+        $updated++
+    }
+    $DownloadQueueGrid.Items.Refresh()
+    return $updated
 }
 
 function Add-DroppedDownloadLinks {
@@ -952,7 +1047,7 @@ function Invoke-RekordboxIntegrationAudit {
     $path=[string]$RekordboxXmlText.Text;if(-not(Test-Path -LiteralPath $path -PathType Leaf)){Show-Message 'Escolha o arquivo master.db do Rekordbox.' 'Saúde do Rekordbox';return}
     try{
         Set-Status 'Pyrekordbox está lendo o master.db…' 10;Pump-Ui;$script:RekordboxLibrary=Get-RekordboxDatabaseLibrary -Path $path
-        $progressAction={param($current,$total,$name);$percent=20+[int][Math]::Round(($current/[Math]::Max(1,$total))*75);Set-Status "Verificando track $current de $total • $name" $percent;if($current -eq 1 -or $current%10 -eq 0 -or $current -eq $total){Pump-Ui}}.GetNewClosure()
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name) "Verificando track $current de $total • $name"} -Percent {param($current,$total) 20+[int][Math]::Round(($current/[Math]::Max(1,$total))*75)}
         $script:RekordboxLibraryAudit=Get-RekordboxAudit -Library $script:RekordboxLibrary -Settings $script:Settings -OnProgress $progressAction;$script:RekordboxAudit=$script:RekordboxLibraryAudit
         Show-AuditResult $script:RekordboxLibraryAudit;Set-Status 'Auditoria da biblioteca concluída' 100
     }catch{$script:RekordboxLibraryAudit=$null;Clear-AuditDisplay;Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao ler o banco do Rekordbox' Error}
@@ -962,7 +1057,7 @@ function Invoke-RekordboxUsbIntegrityAudit {
     $path=[string]$AuditUsbPathText.Text;if(-not(Test-Path -LiteralPath $path -PathType Container)){Show-Message 'Escolha a raiz do pendrive ou dispositivo exportado pelo Rekordbox.' 'Integridade do pendrive';return}
     try{
         Set-Status 'Lendo a estrutura do dispositivo…' 5;Pump-Ui
-        $progressAction={param($current,$total,$name);$percent=10+[int][Math]::Round(($current/[Math]::Max(1,$total))*80);Set-Status "Verificando arquivo $current de $total • $name" $percent;if($current -eq 1 -or $current%10 -eq 0 -or $current -eq $total){Pump-Ui}}.GetNewClosure()
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name) "Verificando arquivo $current de $total • $name"} -Percent {param($current,$total) 10+[int][Math]::Round(($current/[Math]::Max(1,$total))*80)}
         $script:RekordboxUsbAudit=Get-RekordboxUsbAudit -Root $path -Settings $script:Settings -OnProgress $progressAction;Show-AuditResult $script:RekordboxUsbAudit;Set-Status 'Integridade do pendrive verificada' 100
     }catch{$script:RekordboxUsbAudit=$null;Clear-AuditDisplay;Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao verificar o pendrive' Error}
 }
@@ -975,7 +1070,7 @@ function Update-AuditSelectionButtons {
 }
 
 function Show-AuditMetadataEditor {
-    param([Parameter(Mandatory)]$Row)
+    param([Parameter(Mandatory)]$Row,[string]$CapturePath)
     [xml]$editorXaml=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Width="760" Height="585" WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Background="#171613" FontFamily="Segoe UI" Foreground="#171613">
   <Window.Resources>
@@ -984,7 +1079,10 @@ function Show-AuditMetadataEditor {
       <Setter Property="Height" Value="34"/><Setter Property="Padding" Value="9,6"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="#F3F1EC"/><Setter Property="Foreground" Value="#171613"/><Setter Property="BorderBrush" Value="#8B877F"/><Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="10"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Margin" Value="0,0,0,5"/></Style>
-    <Style TargetType="Button"><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="18,5"/><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/></Style>
+    <Style TargetType="Button">
+      <Setter Property="Height" Value="36"/><Setter Property="Padding" Value="18,5"/><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Body" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Body" Property="Opacity" Value="0.86"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="Body" Property="Opacity" Value="0.70"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Body" Property="Opacity" Value="0.38"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
   </Window.Resources>
   <Border BorderBrush="#171613" BorderThickness="1" Background="#D5D1C8">
     <Grid>
@@ -1033,6 +1131,16 @@ function Show-AuditMetadataEditor {
     $dialog.FindName('CloseButton').Add_Click({$dialog.DialogResult=$false;$dialog.Close()})
     $dialog.FindName('CancelButton').Add_Click({$dialog.DialogResult=$false;$dialog.Close()})
     $dialog.FindName('SaveButton').Add_Click({$dialog.DialogResult=$true;$dialog.Close()})
+    if($CapturePath){
+        $dialog.Add_ContentRendered({
+            $dialog.UpdateLayout();$visual=$dialog.Content
+            $width=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualWidth));$height=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualHeight))
+            $bitmap=New-Object Windows.Media.Imaging.RenderTargetBitmap($width,$height,96,96,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($visual)
+            $encoder=New-Object Windows.Media.Imaging.PngBitmapEncoder;$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+            $stream=[IO.File]::Open($CapturePath,[IO.FileMode]::Create);try{$encoder.Save($stream)}finally{$stream.Dispose()}
+            $dialog.DialogResult=$false;$dialog.Close()
+        })
+    }
     if(-not$dialog.ShowDialog()){return $null}
     $year=$boxes.Year.Text.Trim();if($year -and $year -notmatch '^\d{4}$'){Show-Message 'Informe o ano com quatro dígitos, por exemplo 2026.' 'Metadados inválidos' Warning;return $null}
     $bpmText=$boxes.Bpm.Text.Trim();$bpm=0.0;if($bpmText){if(-not[Double]::TryParse(($bpmText -replace ',','.'),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$bpm) -or $bpm -lt 20 -or $bpm -gt 300){Show-Message 'Informe um BPM entre 20 e 300.' 'Metadados inválidos' Warning;return $null}}
@@ -1079,7 +1187,270 @@ function Show-AuditSelectionReview {
 }
 
 function Export-RekordboxIntegrationAuditFile {
-    if(-not$script:RekordboxAudit){Show-Message 'Execute a auditoria primeiro.' 'Auditoria';return};$dialog=New-Object Windows.Forms.SaveFileDialog;$dialog.Title='Exportar auditoria';$dialog.Filter='CSV (*.csv)|*.csv|JSON (*.json)|*.json';$suffix=if([string]$script:RekordboxAudit.Mode -eq 'Usb'){'Pendrive'}else{'Rekordbox'};$dialog.FileName="CRIVO-DJ-Auditoria-$suffix.csv";if($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK){return};Export-RekordboxAudit -Audit $script:RekordboxAudit -Path $dialog.FileName|Out-Null;Show-Message "Auditoria exportada:`n$($dialog.FileName)" 'Auditoria'
+    if(-not$script:RekordboxAudit){Show-Message 'Execute a auditoria primeiro.' 'Auditoria';return};$dialog=New-Object Windows.Forms.SaveFileDialog;$dialog.Title='Exportar auditoria';$dialog.Filter='CSV (*.csv)|*.csv|JSON (*.json)|*.json';$suffix=if([string]$script:RekordboxAudit.Mode -eq 'Usb'){'Pendrive'}else{'Rekordbox'};$dialog.FileName="CRIVO-DJ-Auditoria-$suffix.csv";if($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK){return};try{Export-RekordboxAudit -Audit $script:RekordboxAudit -Path $dialog.FileName|Out-Null;if(-not(Test-Path -LiteralPath $dialog.FileName -PathType Leaf) -or (Get-Item -LiteralPath $dialog.FileName).Length -le 0){throw 'O relatório não foi criado no destino escolhido.'};Show-Message "Auditoria exportada e conferida:`n$($dialog.FileName)" 'Auditoria'}catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao exportar auditoria' Error}
+}
+
+function Select-ToolkitUsbDevice {
+    $initial=if(Test-Path -LiteralPath $ToolkitUsbPathText.Text -PathType Container){$ToolkitUsbPathText.Text}else{''}
+    $selected=Select-Folder 'Escolha o pendrive ou uma pasta de teste' $initial
+    if(-not$selected){return}
+    $ToolkitUsbPathText.Text=$selected
+    $script:UsbHealthReport=$null
+    $script:UsbRecoveryPlan=$null
+    $script:UsbCompatibilityReport=$null
+    $script:UsbBackupPlan=$null
+    $ToolkitChecksGrid.ItemsSource=@()
+    $ToolkitProblemCount.Text='—';$ToolkitAttentionCount.Text='—';$ToolkitUnknownCount.Text='—'
+    $ToolkitOverallText.Text='Pronto para verificar'
+    $ToolkitExportButton.IsEnabled=$false
+    $ToolkitFirstAidButton.IsEnabled=$false
+    $ToolkitCompatibilityButton.IsEnabled=$false
+    $ToolkitOpenEquipmentSourceButton.IsEnabled=$false
+    $CompatibilityChecksGrid.ItemsSource=@()
+    $ToolkitCompatibilityStatus.Text='Faça primeiro o diagnóstico do dispositivo'
+    $ToolkitRecoveryStatusText.Text='Faça primeiro o diagnóstico do dispositivo'
+    $ToolkitBackupSummaryText.Text='Escolha também onde a cópia será salva'
+    $ToolkitCreateBackupButton.IsEnabled=$false
+    Update-ContextInformation
+}
+
+function Invoke-ToolkitUsbHealth {
+    $path=[string]$ToolkitUsbPathText.Text
+    if(-not(Test-Path -LiteralPath $path -PathType Container)){
+        Show-Message 'Escolha o pendrive ou uma pasta de teste antes de iniciar.' 'Kit de ferramentas USB'
+        return
+    }
+    try {
+        $ToolkitScanUsbButton.IsEnabled=$false
+        Set-Status 'KIT DE FERRAMENTAS USB • VERIFICANDO EM MODO SOMENTE LEITURA' 0
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name) "Verificando $current de $total • $name"} -Percent {param($current,$total) [int](($current/[Math]::Max(1,$total))*100)}
+        $script:UsbHealthReport=Get-CrivoUsbHealth -Root $path -Settings $script:Settings -OnProgress $progressAction
+        $ToolkitChecksGrid.ItemsSource=@($script:UsbHealthReport.Checks)
+        $ToolkitProblemCount.Text=[string]$script:UsbHealthReport.ProblemCount
+        $ToolkitAttentionCount.Text=[string]$script:UsbHealthReport.AttentionCount
+        $ToolkitUnknownCount.Text=[string]$script:UsbHealthReport.UnknownCount
+        $ToolkitOverallText.Text=[string]$script:UsbHealthReport.Overall
+        $ToolkitLimitText.Text=[string]$script:UsbHealthReport.Limitations[0]
+        $ToolkitExportButton.IsEnabled=$true
+        $ToolkitCompatibilityButton.IsEnabled=($EquipmentProfileCombo.SelectedItem -ne $null)
+        $legacyDatabase=Join-Path $path 'PIONEER\rekordbox\EXPORT.PDB'
+        $recoveryHelper=Join-Path $PSScriptRoot 'Tools\CRIVO-UsbRecovery\CRIVO-UsbRecovery.exe'
+        $ToolkitFirstAidButton.IsEnabled=(Test-Path -LiteralPath $legacyDatabase -PathType Leaf) -and (Test-Path -LiteralPath $recoveryHelper -PathType Leaf)
+        $ToolkitRecoveryStatusText.Text=if($ToolkitFirstAidButton.IsEnabled){'Há informações do Rekordbox que podem ser revisadas para recuperação.'}else{'Nenhuma biblioteca antiga recuperável foi confirmada neste dispositivo.'}
+        if(Test-Path -LiteralPath $ToolkitBackupDestinationText.Text -PathType Container){Update-ToolkitBackupPlan}
+        Update-ContextInformation
+    } catch {
+        $script:UsbHealthReport=$null
+        $script:UsbRecoveryPlan=$null
+        $ToolkitChecksGrid.ItemsSource=@()
+        $ToolkitFirstAidButton.IsEnabled=$false
+        $ToolkitCompatibilityButton.IsEnabled=$false
+        $ToolkitCreateBackupButton.IsEnabled=$false
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+        Show-Message $_.Exception.Message 'Falha no diagnóstico do dispositivo' Error
+    } finally {
+        $ToolkitScanUsbButton.IsEnabled=$true
+    }
+}
+
+function Format-CrivoByteSize {
+    param([int64]$Bytes)
+    if($Bytes -ge 1TB){return ('{0:N2} TB' -f ($Bytes/1TB))}
+    if($Bytes -ge 1GB){return ('{0:N2} GB' -f ($Bytes/1GB))}
+    if($Bytes -ge 1MB){return ('{0:N1} MB' -f ($Bytes/1MB))}
+    if($Bytes -ge 1KB){return ('{0:N1} KB' -f ($Bytes/1KB))}
+    return "$Bytes bytes"
+}
+
+function Initialize-ToolkitEquipmentProfiles {
+    try{
+        $script:EquipmentCatalog=Get-CrivoEquipmentCatalog
+        $EquipmentProfileCombo.ItemsSource=@($script:EquipmentCatalog.Profiles)
+        if($EquipmentProfileCombo.Items.Count){$EquipmentProfileCombo.SelectedIndex=0}
+    }catch{
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+        $EquipmentProfileCombo.ItemsSource=@();$ToolkitCompatibilityButton.IsEnabled=$false
+        $ToolkitCompatibilityStatus.Text='O catálogo de equipamentos não pôde ser carregado'
+    }
+}
+
+function Invoke-ToolkitCompatibility {
+    if(-not$script:UsbHealthReport){Show-Message 'Execute primeiro o diagnóstico do dispositivo.' 'Compatibilidade';return}
+    if(-not$EquipmentProfileCombo.SelectedItem){Show-Message 'Escolha o modelo que será usado.' 'Compatibilidade';return}
+    try{
+        $ToolkitCompatibilityButton.IsEnabled=$false
+        Set-Status 'KIT DE FERRAMENTAS USB • COMPARANDO COM A DOCUMENTAÇÃO DO EQUIPAMENTO' 20
+        $profileId=[string]$EquipmentProfileCombo.SelectedItem.Id
+        $script:UsbCompatibilityReport=Test-CrivoEquipmentCompatibility -HealthReport $script:UsbHealthReport -ProfileId $profileId
+        $CompatibilityChecksGrid.ItemsSource=@($script:UsbCompatibilityReport.Checks)
+        $ToolkitCompatibilityStatus.Text=[string]$script:UsbCompatibilityReport.Overall
+        $profile=$script:UsbCompatibilityReport.Profile
+        $CompatibilitySourceText.Text="Fonte oficial: $($profile.SourceTitle) • catálogo revisado em $($script:EquipmentCatalog.ReviewedAt). $($profile.Notes)"
+        $ToolkitOpenEquipmentSourceButton.Tag=[string]$profile.SourceUrl
+        $ToolkitOpenEquipmentSourceButton.IsEnabled=-not[string]::IsNullOrWhiteSpace([string]$profile.SourceUrl)
+        Set-Status "KIT DE FERRAMENTAS USB • COMPATIBILIDADE: $($script:UsbCompatibilityReport.Overall.ToUpperInvariant())" 100
+    }catch{
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+        Show-Message $_.Exception.Message 'Não foi possível verificar a compatibilidade' Error
+    }finally{$ToolkitCompatibilityButton.IsEnabled=$true}
+}
+
+function Update-ToolkitBackupPlan {
+    $source=[string]$ToolkitUsbPathText.Text;$destination=[string]$ToolkitBackupDestinationText.Text
+    $script:UsbBackupPlan=$null;$ToolkitCreateBackupButton.IsEnabled=$false
+    if(-not(Test-Path -LiteralPath $source -PathType Container) -or -not(Test-Path -LiteralPath $destination -PathType Container)){return}
+    try{
+        Set-Status 'KIT DE FERRAMENTAS USB • PREPARANDO O PLANO DA CÓPIA' 0
+        $script:UsbBackupPlan=New-CrivoUsbBackupPlan -SourceRoot $source -DestinationRoot $destination
+        $size=Format-CrivoByteSize -Bytes ([int64]$script:UsbBackupPlan.TotalBytes)
+        if(-not$script:UsbBackupPlan.EnoughSpace){
+            $available=Format-CrivoByteSize -Bytes ([int64]$script:UsbBackupPlan.AvailableBytes)
+            $ToolkitBackupSummaryText.Text="$($script:UsbBackupPlan.FileCount) arquivo(s), $size. Espaço insuficiente: $available disponível(is)."
+        }else{
+            $spaceText=if($script:UsbBackupPlan.SpaceConfirmed){'O espaço disponível foi conferido.'}else{'O Windows não informou o espaço disponível; o CRIVO avisará se a cópia falhar.'}
+            $ToolkitBackupSummaryText.Text="$($script:UsbBackupPlan.FileCount) arquivo(s), $size. $spaceText"
+            $ToolkitCreateBackupButton.IsEnabled=$true
+        }
+        Set-Status 'KIT DE FERRAMENTAS USB • PLANO DA CÓPIA PRONTO PARA REVISÃO' 100
+    }catch{
+        $ToolkitBackupSummaryText.Text=$_.Exception.Message
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+    }
+}
+
+function Select-ToolkitBackupDestination {
+    $initial=if(Test-Path -LiteralPath $ToolkitBackupDestinationText.Text -PathType Container){$ToolkitBackupDestinationText.Text}else{''}
+    $selected=Select-Folder 'Escolha onde salvar a cópia segura' $initial
+    if($selected){$ToolkitBackupDestinationText.Text=$selected;Update-ToolkitBackupPlan}
+}
+
+function Invoke-ToolkitSafeBackup {
+    if(-not$script:UsbBackupPlan){Show-Message 'Escolha a origem e o destino antes de criar a cópia.' 'Cópia segura';return}
+    $size=Format-CrivoByteSize -Bytes ([int64]$script:UsbBackupPlan.TotalBytes)
+    $confirmed=Show-CrivoConfirm -Message "O CRIVO copiará $($script:UsbBackupPlan.FileCount) arquivo(s), totalizando $size, e comparará a assinatura digital de cada arquivo.`n`nIsso pode demorar. O dispositivo original será usado somente para leitura." -Title 'Criar cópia segura' -ConfirmText 'CRIAR CÓPIA SEGURA' -CancelText 'VOLTAR'
+    if(-not$confirmed){return}
+    try{
+        $ToolkitCreateBackupButton.IsEnabled=$false;$ToolkitChooseBackupDestinationButton.IsEnabled=$false;$ToolkitChooseUsbButton.IsEnabled=$false
+        $progressAction=New-UiProgressAction -Message {param($current,$total,$name);$short=if($name.Length -gt 55){'…'+$name.Substring($name.Length-54)}else{$name};"Cópia segura: $current de $total • $short"} -Percent {param($current,$total) [int](($current/[Math]::Max(1,$total))*100)}
+        $result=Invoke-CrivoUsbBackup -Plan $script:UsbBackupPlan -OnProgress $progressAction
+        $ToolkitBackupResultText.Text="Cópia validada: $($result.FileCount) arquivo(s), $($result.VerifiedCount) assinatura(s) conferida(s)."
+        Set-Status 'KIT DE FERRAMENTAS USB • CÓPIA SEGURA VALIDADA' 100
+        $open=Show-CrivoDialog -Message "A cópia foi criada e validada.`n`n$($result.FileCount) arquivo(s)`n$size`n$($result.VerifiedCount) assinatura(s) digitais conferida(s)`n`nO dispositivo original não foi alterado." -Title 'Cópia segura concluída' -PrimaryText 'ABRIR CÓPIA' -SecondaryText 'FECHAR' -Question
+        if($open){try{Start-Process -FilePath ([string]$result.BackupRoot)|Out-Null}catch{}}
+    }catch{
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+        $ToolkitBackupResultText.Text='A cópia não foi concluída nem validada. A origem não foi alterada.'
+        Show-Message $_.Exception.Message 'Cópia segura não concluída' Error
+    }finally{
+        $ToolkitChooseBackupDestinationButton.IsEnabled=$true;$ToolkitChooseUsbButton.IsEnabled=$true
+        $ToolkitCreateBackupButton.IsEnabled=($null -ne $script:UsbBackupPlan -and [bool]$script:UsbBackupPlan.EnoughSpace)
+    }
+}
+
+function Show-CrivoRecoveryCompletion {
+    param([Parameter(Mandatory)]$Result)
+    $message=@"
+A cópia recuperada foi criada e validada.
+
+$($Result.copied_file_count) arquivo(s) preservado(s)
+$($Result.copied_audio_count) arquivo(s) de áudio
+$($Result.created_playlist_count) playlist(s) criada(s)
+$($Result.confirmed_link_count) posição(ões) de tracks recuperada(s)
+$($Result.unresolved_link_count) posição(ões) não confirmada(s)
+
+O dispositivo original não foi alterado.
+"@
+    $message=$message.Trim()+"`n`nPróximo passo: no Rekordbox, use Arquivo > Importar > Importar playlist e escolha os arquivos M3U8 da pasta Playlists. Depois, analise as tracks e exporte para outro pendrive."
+    $openPlaylists=Show-CrivoDialog -Message $message -Title 'Cópia recuperada concluída' -PrimaryText 'ABRIR PLAYLISTS' -SecondaryText 'VER RELATÓRIO' -Question
+    if($openPlaylists){
+        $playlists=Join-Path ([string]$Result.recovery_root) 'Playlists'
+        try{Start-Process -FilePath $playlists|Out-Null}catch{}
+    }else{
+        $report=Join-Path ([string]$Result.recovery_root) 'Relatorio-da-recuperacao.html'
+        if(Test-Path -LiteralPath $report -PathType Leaf){try{Start-Process -FilePath $report|Out-Null}catch{}}
+    }
+}
+
+function Show-ToolkitRecoveryReview {
+    if(-not$script:UsbHealthReport){Show-Message 'Verifique o dispositivo antes de revisar a recuperação.' 'Recuperação';return}
+    $source=[string]$ToolkitUsbPathText.Text
+    $database=Join-Path $source 'PIONEER\rekordbox\EXPORT.PDB'
+    if(-not(Test-Path -LiteralPath $database -PathType Leaf)){
+        Show-Message 'A biblioteca antiga do Rekordbox não foi encontrada neste dispositivo. Nenhuma recuperação foi iniciada.' 'Recuperação não disponível'
+        return
+    }
+    try{
+        $ToolkitFirstAidButton.IsEnabled=$false
+        Set-Status 'KIT DE FERRAMENTAS USB • LENDO O QUE AINDA PODE SER RECUPERADO' 0
+        $workingDirectory=Join-Path (Get-AppDataRoot) 'Planos de recuperacao'
+        $script:UsbRecoveryPlan=New-CrivoUsbRecoveryPlan -SourceRoot $source -WorkingDirectory $workingDirectory -OnWait {Pump-Ui}
+    }catch{
+        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+        Show-Message ($_.Exception.Message+"`n`nNenhum arquivo foi criado e o dispositivo original não foi alterado.") 'Não foi possível revisar a recuperação' Error
+        return
+    }finally{
+        $ToolkitFirstAidButton.IsEnabled=$true
+    }
+
+    $plan=$script:UsbRecoveryPlan.Plan
+    $rows=@($plan.playlists|ForEach-Object{[pscustomobject]@{Playlist=[string]$_.path;Resultado=([string]$_.status).ToUpperInvariant();Confirmadas=[int]$_.resolved_entries;NaoConfirmadas=[int]$_.unresolved_entries}})
+    $dialog=New-Object Windows.Window
+    $dialog.Title='CRIVO DJ — Revisar recuperação';$dialog.Width=940;$dialog.Height=680;$dialog.MinWidth=820;$dialog.MinHeight=600
+    $dialog.WindowStartupLocation='CenterOwner';$dialog.ResizeMode='CanResizeWithGrip';$dialog.WindowStyle='None';$dialog.ShowInTaskbar=$false
+    $dialog.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#B4B0A8');$dialog.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$dialog.FontFamily='Segoe UI'
+    if($window -and $window.IsLoaded){$dialog.Owner=$window};if($window.Icon){$dialog.Icon=$window.Icon}
+    $shell=New-Object Windows.Controls.Border;$shell.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$shell.BorderThickness='1'
+    $layout=New-Object Windows.Controls.Grid
+    foreach($height in @('Auto','Auto','Auto','*','Auto','Auto')){$definition=New-Object Windows.Controls.RowDefinition;$definition.Height=$height;$layout.RowDefinitions.Add($definition)}
+    $header=New-Object Windows.Controls.Border;$header.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$header.Padding='18,13'
+    $headerText=New-Object Windows.Controls.TextBlock;$headerText.Text='REVISAR RECUPERAÇÃO';$headerText.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$headerText.FontWeight='Bold';$headerText.FontSize=14;$header.Child=$headerText;$header.Add_MouseLeftButtonDown({try{$dialog.DragMove()}catch{}});$layout.Children.Add($header)|Out-Null
+    $intro=New-Object Windows.Controls.TextBlock;$intro.Text='O CRIVO leu a biblioteca em modo somente leitura. Revise abaixo o que foi possível confirmar antes de criar uma cópia em outro local.';$intro.TextWrapping='Wrap';$intro.Margin='18,15,18,8';$intro.FontSize=12;[Windows.Controls.Grid]::SetRow($intro,1);$layout.Children.Add($intro)|Out-Null
+    $summary=New-Object Windows.Controls.Border;$summary.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#CAC6BD');$summary.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#777269');$summary.BorderThickness='1';$summary.Margin='18,4,18,10';$summary.Padding='12,9'
+    $summaryText=New-Object Windows.Controls.TextBlock;$summaryText.Text="$($plan.physical_audio_count) ÁUDIOS LOCALIZADOS   •   $($plan.playlists_recoverable) PLAYLIST(S) RECUPERÁVEL(IS)   •   $($plan.playlists_partial) PARCIAL(IS)   •   $($plan.playlists_unconfirmed) NÃO CONFIRMADA(S)";$summaryText.FontWeight='Bold';$summaryText.FontSize=11;$summaryText.TextWrapping='Wrap';$summary.Child=$summaryText;[Windows.Controls.Grid]::SetRow($summary,2);$layout.Children.Add($summary)|Out-Null
+    $grid=New-Object Windows.Controls.DataGrid;$grid.Margin='18,0,18,10';$grid.AutoGenerateColumns=$false;$grid.IsReadOnly=$true;$grid.SelectionMode='Single';$grid.SelectionUnit='FullRow';$grid.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#E1DED6');$grid.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#777269');$grid.ItemsSource=$rows
+    foreach($spec in @(@('PLAYLIST','Playlist','*'),@('RESULTADO','Resultado','205'),@('CONFIRMADAS','Confirmadas','105'),@('NÃO CONFIRMADAS','NaoConfirmadas','125'))){$column=New-Object Windows.Controls.DataGridTextColumn;$column.Header=$spec[0];$column.Binding=New-Object Windows.Data.Binding($spec[1]);$column.Width=$spec[2];$grid.Columns.Add($column)}
+    [Windows.Controls.Grid]::SetRow($grid,3);$layout.Children.Add($grid)|Out-Null
+    $options=New-Object Windows.Controls.StackPanel;$options.Margin='18,0,18,8'
+    $warning=New-Object Windows.Controls.TextBlock;$warning.Text='A recuperação pode ficar incompleta. O CRIVO recupera somente as informações que consegue confirmar. Dados danificados podem resultar em tracks ausentes, playlists incompletas ou ordem diferente da original. O dispositivo original não será alterado.';$warning.TextWrapping='Wrap';$warning.FontWeight='SemiBold';$warning.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#6F4700');$warning.Margin='0,0,0,10';$options.Children.Add($warning)|Out-Null
+    $destinationRow=New-Object Windows.Controls.Grid;$destinationRow.ColumnDefinitions.Add((New-Object Windows.Controls.ColumnDefinition));$buttonColumn=New-Object Windows.Controls.ColumnDefinition;$buttonColumn.Width='190';$destinationRow.ColumnDefinitions.Add($buttonColumn)
+    $destinationText=New-Object Windows.Controls.TextBox;$destinationText.IsReadOnly=$true;$destinationText.Height=34;$destinationText.VerticalContentAlignment='Center';$destinationText.Text='Escolha onde salvar a cópia recuperada';$destinationText.Padding='8,0';$destinationRow.Children.Add($destinationText)|Out-Null
+    $choose=New-Object Windows.Controls.Button;$choose.Content='ESCOLHER ONDE SALVAR';$choose.Height=34;$choose.Margin='8,0,0,0';$choose.Add_Click({$selected=Select-Folder 'Escolha onde salvar a cópia recuperada' '';if($selected){$destinationText.Text=$selected}});[Windows.Controls.Grid]::SetColumn($choose,1);$destinationRow.Children.Add($choose)|Out-Null;$options.Children.Add($destinationRow)|Out-Null
+    [Windows.Controls.Grid]::SetRow($options,4);$layout.Children.Add($options)|Out-Null
+    $footer=New-Object Windows.Controls.StackPanel;$footer.Orientation='Horizontal';$footer.HorizontalAlignment='Right';$footer.Margin='18,2,18,15'
+    $back=New-Object Windows.Controls.Button;$back.Content='VOLTAR';$back.MinWidth=115;$back.Height=38;$back.Margin='0,0,8,0';$back.Add_Click({$dialog.Close()});$footer.Children.Add($back)|Out-Null
+    $create=New-Object Windows.Controls.Button;$create.Content='CRIAR CÓPIA RECUPERADA';$create.MinWidth=215;$create.Height=38;$create.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$create.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$create.FontWeight='Bold'
+    $create.Add_Click({
+        $destination=[string]$destinationText.Text
+        if(-not(Test-Path -LiteralPath $destination -PathType Container)){Show-Message 'Escolha uma pasta válida fora do dispositivo original.' 'Onde salvar';return}
+        $sourceFull=[IO.Path]::GetFullPath($source).TrimEnd('\')+'\';$destinationFull=[IO.Path]::GetFullPath($destination).TrimEnd('\')+'\'
+        if($destinationFull.StartsWith($sourceFull,[StringComparison]::OrdinalIgnoreCase)){Show-Message 'Escolha um destino fora do dispositivo original.' 'Destino inseguro';return}
+        $confirmed=Show-CrivoConfirm -Message "A recuperação pode ficar incompleta. Tracks ausentes, playlists incompletas ou ordem diferente podem permanecer quando os dados de origem estão danificados.`n`nO CRIVO criará e validará uma nova cópia. O dispositivo original não será alterado." -Title 'Criar cópia recuperada' -ConfirmText 'CRIAR CÓPIA RECUPERADA' -CancelText 'VOLTAR E REVISAR'
+        if(-not$confirmed){return}
+        try{
+            $create.IsEnabled=$false;$choose.IsEnabled=$false;$back.IsEnabled=$false
+            Set-Status 'KIT DE FERRAMENTAS USB • CRIANDO E VALIDANDO A CÓPIA RECUPERADA' 10
+            $result=Invoke-CrivoUsbRecoveryCopy -PlanPath $script:UsbRecoveryPlan.PlanPath -DestinationRoot $destination -OnWait {Pump-Ui}
+            Set-Status 'KIT DE FERRAMENTAS USB • CÓPIA RECUPERADA VALIDADA' 100
+            $dialog.Close();Show-CrivoRecoveryCompletion -Result $result
+        }catch{
+            Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+            Show-Message ($_.Exception.Message+"`n`nA origem não foi alterada. Não use uma cópia que não tenha sido validada pelo CRIVO.") 'A cópia recuperada não foi concluída' Error
+            $create.IsEnabled=$true;$choose.IsEnabled=$true;$back.IsEnabled=$true
+        }
+    });$footer.Children.Add($create)|Out-Null
+    [Windows.Controls.Grid]::SetRow($footer,5);$layout.Children.Add($footer)|Out-Null
+    $shell.Child=$layout;$dialog.Content=$shell;[void]$dialog.ShowDialog()
+}
+
+function Export-ToolkitUsbHealth {
+    if(-not$script:UsbHealthReport){Show-Message 'Execute o diagnóstico antes de exportar.' 'Kit de ferramentas USB';return}
+    try{
+        $reportDirectory=Join-Path (Get-AppDataRoot) 'Relatorios'
+        $export=Export-CrivoUsbHealthReport -Report $script:UsbHealthReport -Directory $reportDirectory
+        if(-not(Test-Path -LiteralPath $export.HtmlPath -PathType Leaf) -or -not(Test-Path -LiteralPath $export.TechnicalPath -PathType Leaf)){throw 'Os arquivos do diagnóstico não foram criados por completo.'}
+        try{Start-Process -FilePath $export.HtmlPath|Out-Null}catch{}
+        Show-Message "Relatório visual e arquivo técnico foram criados e conferidos.`n`n$reportDirectory" 'Diagnóstico exportado'
+    }catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao exportar diagnóstico' Error}
 }
 
 function Open-RekordboxApplication {
@@ -1221,12 +1592,12 @@ function Show-RulesDialog {
 function Export-CurrentSimulation {
     if(-not $script:Plan){Show-Message 'Escolha origem e destino para calcular a simulação.';return}
     $dialog=New-Object Windows.Forms.SaveFileDialog; $dialog.Title='Exportar simulação (dry-run)'; $dialog.Filter='CSV (*.csv)|*.csv|JSON (*.json)|*.json'; $dialog.FileName="CRIVO-DJ-simulacao-$($script:Plan.Id).csv"
-    if($dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK){Export-OrganizationPlan -Plan $script:Plan -Path $dialog.FileName | Out-Null; Show-Message "Simulação exportada sem mover ou copiar arquivos.`n`n$($dialog.FileName)"}
+    if($dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK){try{Export-OrganizationPlan -Plan $script:Plan -Path $dialog.FileName | Out-Null;if(-not(Test-Path -LiteralPath $dialog.FileName -PathType Leaf) -or (Get-Item -LiteralPath $dialog.FileName).Length -le 0){throw 'A simulação não foi criada no destino escolhido.'};Show-Message "Simulação exportada e conferida sem mover ou copiar arquivos.`n`n$($dialog.FileName)"}catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao exportar simulação' Error}}
 }
 
 function Export-Configuration {
     $dialog=New-Object Windows.Forms.SaveFileDialog; $dialog.Filter='Configuração JSON (*.json)|*.json'; $dialog.FileName='CRIVO-DJ-config.json'
-    if($dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK){Write-JsonFile -Path $dialog.FileName -Value $script:Settings;Show-Message 'Configuração exportada.'}
+    if($dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK){try{Write-JsonFile -Path $dialog.FileName -Value $script:Settings;if(-not(Test-Path -LiteralPath $dialog.FileName -PathType Leaf) -or (Get-Item -LiteralPath $dialog.FileName).Length -le 0){throw 'O arquivo de configuração não foi criado.'};Show-Message "Configuração exportada e conferida:`n$($dialog.FileName)"}catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao exportar configuração' Error}}
 }
 
 function Import-Configuration {
@@ -1318,6 +1689,7 @@ $OpenHistoryButton.Add_Click({
     $text=@($history | Select-Object -First 20 | ForEach-Object { $count=if($_.PSObject.Properties['Counts']){$_.Counts.Total}else{@($_.Items).Count}; "$($_.Date) | $($_.Action) | $count track(s) | $($_.Destination)" }) -join "`n"
     Show-Message $text 'Histórico de execuções'
 })
+$SupportCrivoButton.Add_Click({Show-SupportCrivoDialog})
 $RulesButton.Add_Click({Show-RulesDialog})
 $SystemCheckButton.Add_Click({Show-ODTSystemCheck})
 $ExportDiagnosticButton.Add_Click({Export-ODTDiagnostic})
@@ -1332,7 +1704,7 @@ $StartDownloadButton.Add_Click({Start-DownloadUrls})
 $AddDownloadLinkButton.Add_Click({if((Add-DownloadLinksToGrid -Text $DownloadUrlText.Text)-gt 0){$DownloadUrlText.Clear()}})
 $DownloadUrlText.Add_KeyDown({param($s,$e);if($e.Key -eq [Windows.Input.Key]::Enter){if((Add-DownloadLinksToGrid -Text $DownloadUrlText.Text)-gt 0){$DownloadUrlText.Clear()};$e.Handled=$true}})
 $RemoveDownloadButton.Add_Click({Remove-SelectedDownloadsFromGrid})
-$ChooseDownloadDestinationButton.Add_Click({$selected=Select-Folder 'Escolha onde as tracks baixadas serão salvas' (Get-ODTDownloadPath);if($selected){if(-not$script:Settings.Acquisition.PSObject.Properties['DownloadPath']){$script:Settings.Acquisition|Add-Member NoteProperty DownloadPath $selected}else{$script:Settings.Acquisition.DownloadPath=$selected};Save-Settings;$DownloadDestinationText.Text=$selected;Update-ContextInformation}})
+$ChooseDownloadDestinationButton.Add_Click({$selected=Select-Folder 'Escolha onde as tracks baixadas serão salvas' (Get-ODTDownloadPath);if($selected){if(-not$script:Settings.Acquisition.PSObject.Properties['DownloadPath']){$script:Settings.Acquisition|Add-Member NoteProperty DownloadPath $selected}else{$script:Settings.Acquisition.DownloadPath=$selected};Save-Settings;$DownloadDestinationText.Text=$selected;$updated=Sync-PendingDownloadDestination -Path $selected;Update-ContextInformation;if($updated){$DownloadStatusText.Text="Destino atualizado para $updated item(ns) que ainda não começaram."}}})
 $ClearDownloadsButton.Add_Click({for($i=$script:DownloadQueue.Count-1;$i -ge 0;$i--){if($script:DownloadQueue[$i].Status -in @('Concluido','Expandida')){$script:DownloadQueue.RemoveAt($i)}};$DownloadQueueGrid.Items.Refresh();Update-ContextInformation})
 $DownloadQueueGrid.Add_PreviewDragOver({param($s,$e);$hasLink=$e.Data.GetDataPresent([Windows.DataFormats]::UnicodeText) -or $e.Data.GetDataPresent([Windows.DataFormats]::Text) -or $e.Data.GetDataPresent('UniformResourceLocatorW') -or $e.Data.GetDataPresent('UniformResourceLocator');if($hasLink){$e.Effects=[Windows.DragDropEffects]::Copy}else{$e.Effects=[Windows.DragDropEffects]::None};$e.Handled=$true})
 $DownloadQueueGrid.Add_PreviewDrop({param($s,$e);Add-DroppedDownloadLinks -EventArgs $e;$e.Handled=$true})
@@ -1351,6 +1723,20 @@ $ReviewAuditButton.Add_Click({Show-AuditSelectionReview})
 $AuditSearchText.Add_TextChanged({Update-RekordboxAuditView})
 $AuditFilterCombo.Add_SelectionChanged({Update-RekordboxAuditView})
 $RekordboxAuditGrid.Add_SelectionChanged({Update-AuditSelectionButtons})
+$ToolkitChooseUsbButton.Add_Click({Select-ToolkitUsbDevice})
+$ToolkitScanUsbButton.Add_Click({Invoke-ToolkitUsbHealth})
+$ToolkitExportButton.Add_Click({Export-ToolkitUsbHealth})
+$ToolkitFirstAidButton.Add_Click({Show-ToolkitRecoveryReview})
+$ToolkitCompatibilityButton.Add_Click({Invoke-ToolkitCompatibility})
+$ToolkitOpenEquipmentSourceButton.Add_Click({if($ToolkitOpenEquipmentSourceButton.Tag){try{Start-Process -FilePath ([string]$ToolkitOpenEquipmentSourceButton.Tag)|Out-Null}catch{Show-Message $_.Exception.Message 'Não foi possível abrir a documentação' Error}}})
+$EquipmentProfileCombo.Add_SelectionChanged({
+    $script:UsbCompatibilityReport=$null;$CompatibilityChecksGrid.ItemsSource=@()
+    $ToolkitOpenEquipmentSourceButton.IsEnabled=$false;$ToolkitOpenEquipmentSourceButton.Tag=$null
+    $ToolkitCompatibilityStatus.Text=if($script:UsbHealthReport){'Clique em Verificar compatibilidade'}else{'Faça primeiro o diagnóstico do dispositivo'}
+    $ToolkitCompatibilityButton.IsEnabled=($null -ne $script:UsbHealthReport -and $null -ne $EquipmentProfileCombo.SelectedItem)
+})
+$ToolkitChooseBackupDestinationButton.Add_Click({Select-ToolkitBackupDestination})
+$ToolkitCreateBackupButton.Add_Click({Invoke-ToolkitSafeBackup})
 $ChooseRekordboxExeButton.Add_Click({Select-RekordboxExecutable})
 $SendRekordboxCheck.Add_Click({Sync-OrganizerPlaylistName})
 $PlaylistNameFromFolderRadio.Add_Checked({Sync-OrganizerPlaylistName})
@@ -1379,6 +1765,7 @@ $script:DownloadTimer.Add_Tick({
             if($item.Kind -in @('SpotifyResolver','PlaylistResolver') -and $item.Status -eq 'Analisando'){
                 $item.ProgressValue=[Math]::Min(90,([int]$item.ProgressValue+5));$item.Progress="$($item.ProgressValue)%"
                 [object[]]$resolved=if($item.Kind -eq 'SpotifyResolver'){@(Complete-ODTSpotifyResolver -Resolver $item)}else{@(Complete-ODTPlaylistResolver -Resolver $item)}
+                [object[]]$resolved=@($resolved|Where-Object{$null -ne $_})
                 # No Windows PowerShell 5.1, @($null).Count pode disparar
                 # PropertyNotFoundException dentro de um evento do Dispatcher.
                 # Measure-Object mantém o mesmo resultado sem derrubar a fila
@@ -1402,19 +1789,26 @@ $script:DownloadTimer.Add_Tick({
                 }else{$item.Status='Expandida';$item.Detail='Tracks adicionadas à lista';$resolvedContainers.Add($item)}
             }
             elseif($item.Kind -eq 'Download' -and $item.Status -eq 'Baixando'){try{[void](Get-ODTDownloadProgress -Download $item)}catch{$item.Status='Falhou';$item.Detail="Falha ao atualizar: $($_.Exception.Message)";Write-AppLog -Message $_.Exception.ToString() -Level ERROR}}
+            elseif($item.Kind -eq 'SpotifySourceResolver' -and $item.Status -eq 'Buscando fonte'){
+                try{
+                    $resolvedSource=Complete-ODTSpotifySourceResolver -Resolver $item
+                    if($resolvedSource.Kind -eq 'Download'){$script:DownloadQueue[$i]=$resolvedSource}
+                    elseif($resolvedSource.Status -eq 'Buscando fonte'){$resolvedSource.ProgressValue=[Math]::Min(25,[int]$resolvedSource.ProgressValue+1);$resolvedSource.Progress="$($resolvedSource.ProgressValue)%"}
+                }catch{$item.Status='Falhou';$item.Progress='';$item.ProgressValue=0;$item.Detail=$_.Exception.Message;Write-AppLog -Message $_.Exception.ToString() -Level ERROR}
+            }
         }
         # Resolver e download são independentes do Rekordbox. A auditoria fará a
         # conferência de duplicatas/presença depois, sem bloquear esta fila.
         foreach($request in $newRequests){if($script:DownloadStartRequested -and $request.IsSelected){$request.Status='Pendente';$request.Progress='0%';$request.ProgressValue=0;$request.Detail='Aguardando vaga para baixar'};$script:DownloadQueue.Add($request)}
         foreach($container in $resolvedContainers){[void]$script:DownloadQueue.Remove($container)}
-        $activeDownloads=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Baixando'}).Count
-        $engine=Get-ODTDownloaderPath;$ffmpeg=Get-ODTFFmpegPath
+        $activeDownloads=@($script:DownloadQueue|Where-Object{$_.Status -in @('Baixando','Buscando fonte')}).Count
+        $engine=Get-ODTDownloaderPath;$spotifyEngine=Get-ODTSpotifyResolverPath;$ffmpeg=Get-ODTFFmpegPath
         for($i=0;$i -lt$script:DownloadQueue.Count -and $activeDownloads -lt 2;$i++){
             $request=$script:DownloadQueue[$i];if($request.Status -eq 'Pendente' -and -not$request.IsSelected){$request.Status='Pronto';$request.Progress='';$request.Detail='Desmarcada — clique em Iniciar download quando quiser';continue};if($request.Status -ne 'Pendente'){continue}
-            try{$initialSource=if($request.PSObject.Properties['Artist'] -and $request.Artist){[string]$request.Artist}else{[string]$request.Source};$provider=if($request.PSObject.Properties['Artist']){[string]$request.Source}else{''};$thumbnail=if($request.PSObject.Properties['Thumbnail']){[string]$request.Thumbnail}else{''};$started=Start-ODTDownload -Url $request.DownloadUrl -DisplayUrl $request.Url -InitialTitle $request.Title -InitialSource $initialSource -Provider $provider -InitialDuration $request.Duration -InitialThumbnail $thumbnail -OutputRoot $request.OutputFolder -EnginePath $engine -FFmpegPath $ffmpeg -Quality '320';$started.IsSelected=$true;$script:DownloadQueue[$i]=$started;$activeDownloads++}catch{$request.Status='Falhou';$request.Detail=$_.Exception.Message;Write-AppLog -Message $_.Exception.ToString() -Level ERROR}
+            try{$currentRoot=Get-ODTDownloadPath;if(-not(Test-Path -LiteralPath $currentRoot -PathType Container)){[IO.Directory]::CreateDirectory($currentRoot)|Out-Null};$request.OutputFolder=$currentRoot;$initialSource=if($request.PSObject.Properties['Artist'] -and $request.Artist){[string]$request.Artist}else{[string]$request.Source};$provider=if($request.PSObject.Properties['Artist']){[string]$request.Source}else{''};$thumbnail=if($request.PSObject.Properties['Thumbnail']){[string]$request.Thumbnail}else{''};if($request.PSObject.Properties['SpotifySourceUrl'] -and $request.SpotifySourceUrl){$started=Start-ODTSpotifySourceResolver -SpotifyUrl ([string]$request.SpotifySourceUrl) -OutputRoot $currentRoot -SpotifyEnginePath $spotifyEngine -DownloadEnginePath $engine -FFmpegPath $ffmpeg -Quality '320' -Title ([string]$request.Title) -Artist $initialSource -Duration ([string]$request.Duration) -Thumbnail $thumbnail}else{$started=Start-ODTDownload -Url $request.DownloadUrl -DisplayUrl $request.Url -InitialTitle $request.Title -InitialSource $initialSource -Provider $provider -InitialDuration $request.Duration -InitialThumbnail $thumbnail -OutputRoot $currentRoot -EnginePath $engine -FFmpegPath $ffmpeg -Quality '320'};$started.IsSelected=$true;$script:DownloadQueue[$i]=$started;$activeDownloads++}catch{$request.Status='Falhou';$request.Progress='0%';$request.ProgressValue=0;$request.Detail="Não foi possível iniciar no destino selecionado: $($_.Exception.Message)";Write-AppLog -Message $_.Exception.ToString() -Level ERROR}
         }
-        $active=@($script:DownloadQueue|Where-Object{$_.Status -in @('Baixando','Analisando','Expandindo','Pendente')}).Count;$done=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Concluido'}).Count;$failed=@($script:DownloadQueue|Where-Object{$_.Status -in @('Falhou','Link privado')}).Count
-        $DownloadQueueGrid.Items.Refresh();$DownloadStatusText.Text="$active em andamento | $done concluído(s) | $failed falha(s)";if($MainTabs.SelectedIndex -eq 0){$StatusText.Text="BAIXAR • $active EM ANDAMENTO • $done CONCLUÍDA(S) • $failed FALHA(S)"};if($active -eq 0 -and -not @($script:DownloadQueue|Where-Object{$_.Status -in @('Analisando','Expandindo','Pendente')}).Count){$script:DownloadStartRequested=$false;$script:DownloadTimer.Stop();Update-ContextInformation}
+        $active=@($script:DownloadQueue|Where-Object{$_.Status -in @('Baixando','Buscando fonte','Analisando','Expandindo','Pendente')}).Count;$done=@($script:DownloadQueue|Where-Object{$_.Status -eq 'Concluido'}).Count;$failed=@($script:DownloadQueue|Where-Object{$_.Status -in @('Falhou','Link privado')}).Count
+        $DownloadQueueGrid.Items.Refresh();$DownloadStatusText.Text="$active em andamento | $done concluído(s) | $failed falha(s)";if($MainTabs.SelectedIndex -eq 0){$StatusText.Text="BAIXAR • $active EM ANDAMENTO • $done CONCLUÍDA(S) • $failed FALHA(S)"};if($active -eq 0 -and -not @($script:DownloadQueue|Where-Object{$_.Status -in @('Buscando fonte','Analisando','Expandindo','Pendente')}).Count){$script:DownloadStartRequested=$false;$script:DownloadTimer.Stop();Update-ContextInformation}
     }catch{
         $diagnostic=$_.Exception.ToString()
         if($_.InvocationInfo -and $_.InvocationInfo.PositionMessage){$diagnostic+="`n$($_.InvocationInfo.PositionMessage)"}
@@ -1446,17 +1840,25 @@ $window.Dispatcher.Add_UnhandledException({param($sender,$eventArgs);try{Write-A
 
 Select-ComboTag $DuplicateLevelCombo ([string]$script:Settings.DuplicateLevel)
 Select-ComboTag $MissingPolicyCombo ([string]$script:Settings.MissingMetadataPolicy)
+Initialize-ToolkitEquipmentProfiles
 $WatchFolderCheck.IsChecked=if($script:Settings.PSObject.Properties['WatchFolderEnabled']){[bool]$script:Settings.WatchFolderEnabled}else{$false}
 $configuredRekordbox='';if($script:Settings.PSObject.Properties['Rekordbox'] -and $script:Settings.Rekordbox.PSObject.Properties['ExecutablePath']){$configuredRekordbox=[Environment]::ExpandEnvironmentVariables([string]$script:Settings.Rekordbox.ExecutablePath)};$RekordboxExeText.Text=if($configuredRekordbox){$configuredRekordbox}else{'Localizar automaticamente'}
 try{$RekordboxXmlText.Text=Get-RekordboxDatabasePath;$RekordboxSummaryText.Text='Base do Rekordbox detectada. Clique em Escanear biblioteca.'}catch{$RekordboxXmlText.Text='master.db não localizado — clique em Escolher outra'}
 try{$removable=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=2' -ErrorAction Stop|Where-Object{$_.DeviceID}|Select-Object -First 1);if($removable.Count){$AuditUsbPathText.Text=[string]$removable[0].DeviceID+'\'}}catch{}
+if(Test-Path -LiteralPath $AuditUsbPathText.Text -PathType Container){$ToolkitUsbPathText.Text=$AuditUsbPathText.Text}
 Refresh-UndoState
 Update-ODTEnvironmentStatus|Out-Null
 if ($ValidateOnly) {
     if (-not $window.Icon) { throw 'O ícone próprio do CRIVO DJ não foi carregado na janela.' }
-    $tabOrder=@($MainTabs.Items|ForEach-Object{[string]$_.Header}) -join '|';if($tabOrder -ne 'BAIXAR|ORGANIZAR|AUDITORIA'){throw "Ordem de abas inválida: $tabOrder"}
-    if(-not$SourceText -or -not$SendRekordboxCheck -or -not$OrganizerPlaylistNameText -or -not$PlaylistNameFromFolderRadio -or -not$PlaylistNameCustomRadio -or -not$TemplateVariablesButton -or -not$OrganizerListFilterCombo -or -not$EditTrackMetadataButton -or -not$AuditLibraryModeButton -or -not$AuditUsbModeButton -or -not$AuditUsbPathText -or -not$AuditFilterCombo -or -not$EditAuditMetadataButton -or -not$ReviewAuditButton -or -not$AuditDuplicateCount -or -not$SystemCheckButton -or -not$ExportDiagnosticButton -or -not$EnvironmentStatusText){throw 'Controles do fluxo Baixar > Organizar > Auditoria não foram carregados.'}
-    if($window.Title -ne 'CRIVO DJ por MANELZ0RD'){throw 'O título compacto da janela não foi aplicado.'}
+    $tabOrder=@($MainTabs.Items|ForEach-Object{[string]$_.Header}) -join '|';if($tabOrder -ne 'BAIXAR|ORGANIZAR|AUDITORIA|KIT DE FERRAMENTAS USB'){throw "Ordem de abas inválida: $tabOrder"}
+    if(-not$SourceText -or -not$SendRekordboxCheck -or -not$OrganizerPlaylistNameText -or -not$PlaylistNameFromFolderRadio -or -not$PlaylistNameCustomRadio -or -not$TemplateVariablesButton -or -not$OrganizerListFilterCombo -or -not$EditTrackMetadataButton -or -not$AuditLibraryModeButton -or -not$AuditUsbModeButton -or -not$AuditUsbPathText -or -not$AuditFilterCombo -or -not$EditAuditMetadataButton -or -not$ReviewAuditButton -or -not$AuditDuplicateCount -or -not$ToolkitSubTabs -or -not$ToolkitUsbPathText -or -not$ToolkitScanUsbButton -or -not$ToolkitChecksGrid -or -not$ToolkitExportButton -or -not$EquipmentProfileCombo -or -not$ToolkitCompatibilityButton -or -not$CompatibilityChecksGrid -or -not$ToolkitOpenEquipmentSourceButton -or -not$ToolkitBackupDestinationText -or -not$ToolkitCreateBackupButton -or -not$ToolkitRecoveryStatusText -or -not$SystemCheckButton -or -not$ExportDiagnosticButton -or -not$EnvironmentStatusText){throw 'Controles do fluxo Baixar > Organizar > Auditoria > Kit de ferramentas USB não foram carregados.'}
+    $toolkitOrder=@($ToolkitSubTabs.Items|ForEach-Object{[string]$_.Header}) -join '|';if($toolkitOrder -ne 'DIAGNÓSTICO|CÓPIA SEGURA|RECUPERAÇÃO|COMPATIBILIDADE'){throw "Ordem das ferramentas inválida: $toolkitOrder"}
+    if($EquipmentProfileCombo.Items.Count -lt 1){throw 'O catálogo de equipamentos não foi carregado.'}
+    $queue=New-Object 'Collections.Generic.Queue[Windows.DependencyObject]';$queue.Enqueue($ToolkitRoot);$lightToolkitText=New-Object Collections.Generic.List[string]
+    while($queue.Count){$node=$queue.Dequeue();if($node -is [Windows.Controls.TextBlock] -and $node.Foreground -is [Windows.Media.SolidColorBrush]){$color=$node.Foreground.Color;if($color.R -gt 220 -and $color.G -gt 220 -and $color.B -gt 220){$lightToolkitText.Add([string]$node.Text)}};foreach($child in @([Windows.LogicalTreeHelper]::GetChildren($node))){if($child -is [Windows.DependencyObject]){$queue.Enqueue($child)}}}
+    if($lightToolkitText.Count){throw "O Kit de ferramentas USB contém texto claro sobre fundo claro: $($lightToolkitText -join ' | ')"}
+    if([string]$ToolkitFirstAidButton.Content -ne 'REVISAR RECUPERAÇÃO' -or $ToolkitFirstAidButton.IsEnabled){throw 'A recuperação deve permanecer clara e bloqueada antes da validação do backup.'}
+    if($window.Title -ne 'CRIVO DJ por MANELZ0RD'){throw 'O título final do CRIVO DJ não foi aplicado.'}
     $auditHeaders=@($RekordboxAuditGrid.Columns|ForEach-Object{[string]$_.Header});foreach($header in @('ÁLBUM','GÊNERO','ANO','BPM','TONALIDADE','FORMATO','BITRATE','SAMPLE RATE','PLAYLIST(S)','ANÁLISE','PROBLEMA','DUPLICIDADE','PASTA ORIGEM','NÍVEL','DIAGNÓSTICO','LOCAL')){if($auditHeaders -notcontains $header){throw "A coluna de auditoria '$header' não foi carregada."}}
     $ConfigPanel.IsEnabled=$true
     $ModeGenreBpm.IsChecked=$true; Sync-FolderPattern
@@ -1485,7 +1887,7 @@ if ($ValidateOnly) {
         if (-not (Update-OrganizationPlan)) { throw 'O destino alternativo não calculou a organização.' }
         Write-Output "FOLDER AND DESTINATION FLOW OK: $($script:Tracks.Count) arquivo(s)"
     }
-    foreach($context in @(@(0,'BAIXAR'),@(1,'ORGANIZAR'),@(2,'AUDITORIA'))){$MainTabs.SelectedIndex=[int]$context[0];Update-ContextInformation;if(-not$StatusText.Text.StartsWith([string]$context[1])){throw "O rodapé não acompanhou a aba $($context[1])."}}
+    foreach($context in @(@(0,'BAIXAR'),@(1,'ORGANIZAR'),@(2,'AUDITORIA'),@(3,'KIT DE FERRAMENTAS USB'))){$MainTabs.SelectedIndex=[int]$context[0];Update-ContextInformation;if(-not$StatusText.Text.StartsWith([string]$context[1])){throw "O rodapé não acompanhou a aba $($context[1])."}}
     $MainTabs.SelectedIndex=0
     Write-Output 'VALIDATION OK'; $window.Close(); return
 }
@@ -1575,20 +1977,24 @@ if($MarketingScreenshots){
     $DestinationText.Text='C:\Music\Pesquisa Outubro\Pesquisa Organizada'
     $ConfigPanel.IsEnabled=$true;$ConfigPanel.Opacity=1
     $PreviewGrid.ItemsSource=$demoOrganize
-    $TotalCount.Text='24';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
+    $TotalCount.Text='6';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
     $GenreCounter2.Visibility='Collapsed';$GenreCounter3.Visibility='Collapsed'
-    $PlanSummary.Text='24 tracks analisadas • 21 prontas • 3 com dados faltantes • nenhuma alteração aplicada'
+    $PlanSummary.Text='6 tracks analisadas • 3 prontas • 3 com dados faltantes • nenhuma alteração aplicada'
     $ModeDateGenre.IsChecked=$true;$FolderPatternText.Text='{AAAA} - {MES_NUM} - {MES} - {GENERO}'
     $SendRekordboxCheck.IsChecked=$true;$OrganizerPlaylistNameText.Text='Pesquisa Outubro — Organizado'
     $RekordboxExeText.Text='C:\Program Files\rekordbox\rekordbox.exe'
     $ApplyButton.IsEnabled=$true;$EditTrackMetadataButton.IsEnabled=$true
     $MainTabs.SelectedIndex=1;Update-ContextInformation
-    $TotalCount.Text='24';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
+    $TotalCount.Text='6';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
     $GenreCounter2.Visibility='Collapsed';$GenreCounter3.Visibility='Collapsed'
-    $StatusText.Text='ORGANIZAR • 24 TRACKS • PLANO PRONTO PARA REVISÃO'
+    $StatusText.Text='ORGANIZAR • 6 TRACKS • PLANO PRONTO PARA REVISÃO'
+    $OrganizerOptionsScroll.ScrollToVerticalOffset(0)
+    Pump-Ui
+    Save-MarketingScreenshot '02a-organizar-opcoes.png'
     $OrganizerOptionsScroll.ScrollToVerticalOffset(335)
     Pump-Ui
     Save-MarketingScreenshot '02-organizar-biblioteca.png'
+    Show-AuditMetadataEditor -Row ([pscustomobject]@{Title='Glass Rooms';Artist='Theo Vale';Album='';Genre='Minimal House';Year='';Bpm='128';Key='2A';Location='C:\Music\Pesquisa Outubro\Theo Vale - Glass Rooms.mp3'}) -CapturePath (Join-Path $MarketingOutput 'metadata-editor.png') | Out-Null
 
     $demoAudit=@(
         [pscustomobject]@{Title='Midnight Signal';Artist='Aurora Lines';Album='Night Transit';Genre='Deep House';Year='2026';Bpm='123';Key='8A';Codec='MP3';Bitrate='320';SampleRate='44.1 kHz';PlaylistDisplay='Pesquisa Outubro / Warm Up';Analysis='Completa';IssueType='Saudável';DuplicateType='—';SourceFolder='Pesquisa Outubro';FolderDepth='2';Issues='Nenhum problema encontrado';Location='D:\DJ Library\Deep House\Aurora Lines - Midnight Signal.mp3'},
@@ -1624,12 +2030,63 @@ if($MarketingScreenshots){
         $column.DisplayIndex=$columnIndex
         $column.Width=[Windows.Controls.DataGridLength]::new([double]$spec.Width)
     }
-    $AuditCollectionCount.Text='2.438';$AuditMissingCount.Text='7';$AuditQualityCount.Text='14';$AuditDataCount.Text='32';$AuditDuplicateCount.Text='9'
+    # Os indicadores representam exatamente as sete linhas exibidas na captura.
+    $AuditCollectionCount.Text='7';$AuditMissingCount.Text='1';$AuditQualityCount.Text='1';$AuditDataCount.Text='2';$AuditDuplicateCount.Text='1'
     $AuditFilterCombo.SelectedIndex=0;$ExportRekordboxAuditButton.IsEnabled=$true
     $AuditReadOnlyText.Text='A verificação é somente leitura. Nenhuma alteração é aplicada automaticamente.'
     $MainTabs.SelectedIndex=2;Update-ContextInformation
-    $StatusText.Text='AUDITORIA • 2.438 TRACKS • 62 PONTOS PARA REVISÃO'
+    $StatusText.Text='AUDITORIA • 7 TRACKS • 5 PONTOS PARA REVISÃO'
     Save-MarketingScreenshot '03-auditoria-rekordbox.png'
+
+    $ToolkitUsbPathText.Text='E:\  CRIVO-DEMO • FAT32 • 58,2 GB'
+    $demoUsbChecks=@(
+        [pscustomobject]@{Name='Dispositivo';Level='OK';Summary='Pendrive removível identificado';Detail='E: CRIVO-DEMO'},
+        [pscustomobject]@{Name='Sistema de arquivos';Level='OK';Summary='FAT32 identificado';Detail='Formato amplamente aceito pelos equipamentos comparados'},
+        [pscustomobject]@{Name='Espaço livre';Level='Atenção';Summary='Restam 7,8 GB de 58,2 GB';Detail='Há espaço para uso, mas vale acompanhar antes de novas exportações'},
+        [pscustomobject]@{Name='Biblioteca do Rekordbox';Level='OK';Summary='Biblioteca encontrada e legível';Detail='Nenhuma alteração foi aplicada ao dispositivo'},
+        [pscustomobject]@{Name='Dados de análise';Level='OK';Summary='728 arquivos de análise localizados';Detail='Waveforms e beatgrids foram encontrados'},
+        [pscustomobject]@{Name='Leitura dos áudios';Level='OK';Summary='728 tracks puderam ser inspecionadas';Detail='A leitura técnica não substitui a audição completa'},
+        [pscustomobject]@{Name='Dados das tracks';Level='Atenção';Summary='12 tracks têm dados incompletos';Detail='Título, artista, álbum, gênero e ano foram conferidos'},
+        [pscustomobject]@{Name='Duplicatas';Level='Atenção';Summary='3 possíveis repetições';Detail='O resultado pede revisão humana antes de qualquer decisão'}
+    )
+    $ToolkitChecksGrid.ItemsSource=$demoUsbChecks
+    $ToolkitProblemCount.Text='0';$ToolkitAttentionCount.Text='3';$ToolkitUnknownCount.Text='0'
+    $ToolkitOverallText.Text='Dispositivo utilizável com pontos para revisar'
+    $ToolkitLimitText.Text='Diagnóstico concluído em modo somente leitura • 728 tracks verificadas'
+    $ToolkitExportButton.IsEnabled=$true
+    $MainTabs.SelectedIndex=3;$ToolkitSubTabs.SelectedIndex=0;Update-ContextInformation
+    $StatusText.Text='KIT USB • DIAGNÓSTICO CONCLUÍDO • 3 PONTOS DE ATENÇÃO'
+    Save-MarketingScreenshot '04-kit-usb-diagnostico.png'
+
+    $ToolkitBackupDestinationText.Text='C:\Music\Backups\CRIVO-DEMO-recuperado'
+    $ToolkitBackupSummaryText.Text='728 tracks • 18,4 GB • espaço disponível confirmado'
+    $ToolkitBackupResultText.Text='Plano pronto: a origem permanecerá somente leitura e cada arquivo será conferido.'
+    $ToolkitCreateBackupButton.IsEnabled=$true
+    $ToolkitSubTabs.SelectedIndex=1
+    $StatusText.Text='KIT USB • CÓPIA SEGURA • 728 TRACKS PRONTAS PARA COPIAR'
+    Save-MarketingScreenshot '05-kit-usb-copia-segura.png'
+
+    $ToolkitRecoveryStatusText.Text='14 playlists podem ser reconstruídas • 721 de 728 tracks localizadas'
+    $ToolkitFirstAidButton.IsEnabled=$true
+    $ToolkitSubTabs.SelectedIndex=2
+    $StatusText.Text='KIT USB • RECUPERAÇÃO EM OUTRO LOCAL • REVISÃO DISPONÍVEL'
+    Save-MarketingScreenshot '06-kit-usb-recuperacao.png'
+
+    $demoCompatibility=@(
+        [pscustomobject]@{Name='Sistema de arquivos';Level='Compatível';Summary='FAT32';Detail='Dentro do formato documentado'},
+        [pscustomobject]@{Name='Biblioteca do Rekordbox';Level='Compatível';Summary='EXPORT.PDB legível';Detail='Estrutura aceita pelo perfil selecionado'},
+        [pscustomobject]@{Name='Formatos de áudio';Level='Compatível';Summary='MP3, WAV e AIFF';Detail='728 de 728 tracks dentro dos formatos publicados'},
+        [pscustomobject]@{Name='Taxa de amostragem';Level='Compatível';Summary='44,1 kHz e 48 kHz';Detail='Nenhuma track acima do limite documentado'},
+        [pscustomobject]@{Name='Integridade da biblioteca';Level='Atenção';Summary='3 possíveis duplicatas';Detail='Não impede a leitura, mas merece revisão'}
+    )
+    if($EquipmentProfileCombo.Items.Count -gt 0){$EquipmentProfileCombo.SelectedIndex=1}
+    $CompatibilityChecksGrid.ItemsSource=$demoCompatibility
+    $ToolkitCompatibilityStatus.Text='Compatível com os requisitos publicados para o CDJ-2000NXS2'
+    $CompatibilitySourceText.Text='Comparação baseada na documentação oficial da AlphaTheta / Pioneer DJ • revisão de outubro de 2026'
+    $ToolkitCompatibilityButton.IsEnabled=$true;$ToolkitOpenEquipmentSourceButton.IsEnabled=$true
+    $ToolkitSubTabs.SelectedIndex=3
+    $StatusText.Text='KIT USB • COMPATIBILIDADE CONFERIDA • CDJ-2000NXS2'
+    Save-MarketingScreenshot '07-kit-usb-compatibilidade.png'
 
     $window.Close();return
 }

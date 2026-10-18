@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="CRIVO DJ por MANELZ0RD" Width="1280" Height="840" MinWidth="1120" MinHeight="720" AllowDrop="True" WindowStartupLocation="CenterScreen" WindowStyle="SingleBorderWindow" ResizeMode="CanResize" Background="#B4B0A8" Foreground="#171613" FontFamily="Segoe UI" UseLayoutRounding="True">
   <Window.Resources>
     <!-- Paleta CRIVO: liga quente, papel mineral, tinta e preto de referência. -->
@@ -16,6 +16,7 @@
     <DropShadowEffect x:Key="BlueGlow" Color="#171613" BlurRadius="2" ShadowDepth="0" Opacity="0.10" />
     <Style TargetType="TextBlock">
       <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="#171613" />
     </Style>
     <Style TargetType="Button">
       <Setter Property="Background" Value="#C5C1B8" />
@@ -722,6 +723,66 @@
             </Grid>
           </Grid>
         </TabItem>
+        <TabItem Header="KIT DE FERRAMENTAS USB">
+          <Grid x:Name="ToolkitRoot" Margin="18">
+            <Grid.Resources>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="#171613"/></Style>
+            </Grid.Resources>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="KIT DE FERRAMENTAS USB" FontSize="18" FontWeight="Bold" Foreground="#171613" />
+              <TextBlock Text="Diagnóstico, compatibilidade, cópia segura e recuperação. O CRIVO não formata nem altera automaticamente o dispositivo original." Foreground="#45413B" FontSize="11" Margin="0,4,0,0" />
+              <TextBlock Text="FERRAMENTAS DE APOIO PARA SEU PENDRIVE" Foreground="#57534C" FontWeight="Bold" FontSize="10" Margin="0,5,0,0" />
+            </StackPanel>
+            <Border Grid.Row="1" Style="{StaticResource Panel}" Margin="0,12,0,10">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center"><TextBlock Text="DISPOSITIVO EM ANÁLISE" FontWeight="Bold" FontSize="11"/><TextBlock Text="A mesma origem será usada nas ferramentas abaixo" Foreground="#57534C" FontSize="9" Margin="0,3,0,0"/></StackPanel>
+                <TextBox x:Name="ToolkitUsbPathText" Grid.Column="1" IsReadOnly="True" Text="Escolha o pendrive ou uma pasta de teste" VerticalContentAlignment="Center" Margin="8,0"/>
+                <Button x:Name="ToolkitChooseUsbButton" Grid.Column="2" Content="ESCOLHER DISPOSITIVO"/>
+              </Grid>
+            </Border>
+            <TabControl x:Name="ToolkitSubTabs" Grid.Row="2">
+              <TabControl.Resources>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="#171613"/></Style>
+              </TabControl.Resources>
+              <TabItem Header="DIAGNÓSTICO">
+                <Grid Margin="12">
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="210"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="SAÚDE LÓGICA DO DISPOSITIVO" FontWeight="Bold" FontSize="12"/><TextBlock Text="Verificação somente leitura. Não mede desgaste físico quando o pendrive não fornece esse dado." Foreground="#57534C" FontSize="10" Margin="0,3,0,0"/></StackPanel><Button x:Name="ToolkitScanUsbButton" Grid.Column="1" Content="VERIFICAR DISPOSITIVO" Style="{StaticResource PrimaryButton}"/></Grid>
+                  <Grid Grid.Row="1" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition Width="1.7*"/></Grid.ColumnDefinitions><Border Style="{StaticResource Counter}"><StackPanel><TextBlock Text="PROBLEMAS CONFIRMADOS" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="ToolkitProblemCount" Text="—" Foreground="#8F1F1F" FontSize="23" FontWeight="Bold"/></StackPanel></Border><Border Grid.Column="1" Style="{StaticResource Counter}"><StackPanel><TextBlock Text="PONTOS DE ATENÇÃO" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="ToolkitAttentionCount" Text="—" Foreground="#7B5200" FontSize="23" FontWeight="Bold"/></StackPanel></Border><Border Grid.Column="2" Style="{StaticResource Counter}"><StackPanel><TextBlock Text="NÃO VERIFICADOS" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="ToolkitUnknownCount" Text="—" Foreground="#45413B" FontSize="23" FontWeight="Bold"/></StackPanel></Border><Border Grid.Column="3" Style="{StaticResource Counter}" Margin="0"><StackPanel><TextBlock Text="RESULTADO" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="ToolkitOverallText" Text="Aguardando diagnóstico" Foreground="#171613" FontSize="15" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border></Grid>
+                  <Border Grid.Row="2" Style="{StaticResource Panel}" Padding="0" Margin="0,10,0,0"><DataGrid x:Name="ToolkitChecksGrid" IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns><DataGridTextColumn Header="VERIFICAÇÃO" Binding="{Binding Name}" Width="190"/><DataGridTextColumn Header="RESULTADO" Binding="{Binding Level}" Width="125"/><DataGridTextColumn Header="O QUE FOI ENCONTRADO" Binding="{Binding Summary}" Width="2*"/><DataGridTextColumn Header="O QUE ISSO SIGNIFICA" Binding="{Binding Detail}" Width="2.3*"/></DataGrid.Columns></DataGrid></Border>
+                  <Grid Grid.Row="3" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="205"/></Grid.ColumnDefinitions><TextBlock x:Name="ToolkitLimitText" Text="O diagnóstico não garante a condição física futura da memória USB." Foreground="#45413B" FontSize="10" VerticalAlignment="Center"/><Button x:Name="ToolkitExportButton" Grid.Column="1" Content="EXPORTAR DIAGNÓSTICO" IsEnabled="False"/></Grid>
+                </Grid>
+              </TabItem>
+              <TabItem Header="CÓPIA SEGURA">
+                <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <StackPanel><TextBlock Text="CÓPIA INTEGRAL VERIFICADA" FontWeight="Bold" FontSize="12"/><TextBlock Text="Copia todos os arquivos para outro local e compara a assinatura digital de cada um. A origem permanece somente leitura." Foreground="#57534C" FontSize="10" Margin="0,3,0,0"/></StackPanel>
+                  <Border Grid.Row="1" Style="{StaticResource Panel}" Margin="0,12,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="175"/><ColumnDefinition/><ColumnDefinition Width="205"/></Grid.ColumnDefinitions><TextBlock Text="ONDE SALVAR A CÓPIA" FontWeight="Bold" VerticalAlignment="Center"/><TextBox x:Name="ToolkitBackupDestinationText" Grid.Column="1" IsReadOnly="True" Text="Escolha uma pasta fora do dispositivo original" VerticalContentAlignment="Center" Margin="8,0"/><Button x:Name="ToolkitChooseBackupDestinationButton" Grid.Column="2" Content="ESCOLHER ONDE SALVAR"/></Grid></Border>
+                  <Border Grid.Row="2" Style="{StaticResource Counter}" Margin="0,10,0,0"><TextBlock x:Name="ToolkitBackupSummaryText" Text="Aguardando origem e destino" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"/></Border>
+                  <Border Grid.Row="3" Style="{StaticResource Panel}" Margin="0,10,0,0"><StackPanel><TextBlock Text="O QUE SERÁ FEITO" FontWeight="Bold"/><TextBlock Text="1. Listar todos os arquivos, inclusive ocultos.&#x0a;2. Conferir o espaço disponível.&#x0a;3. Copiar sem remover nem alterar a origem.&#x0a;4. Comparar a assinatura digital de cada arquivo.&#x0a;5. Gerar uma lista completa e um relatório.&#x0a;&#x0a;Uma operação interrompida ficará marcada como cópia incompleta e nunca será apresentada como validada." TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20"/></StackPanel></Border>
+                  <Grid Grid.Row="4" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions><TextBlock x:Name="ToolkitBackupResultText" Text="Nenhuma cópia executada nesta sessão." Foreground="#45413B" FontSize="10" VerticalAlignment="Center"/><Button x:Name="ToolkitCreateBackupButton" Grid.Column="1" Content="CRIAR CÓPIA SEGURA" Style="{StaticResource PrimaryButton}" IsEnabled="False"/></Grid>
+                </Grid>
+              </TabItem>
+              <TabItem Header="RECUPERAÇÃO">
+                <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <StackPanel><TextBlock Text="RECUPERAÇÃO EM OUTRO LOCAL" FontWeight="Bold" FontSize="12"/><TextBlock Text="Tenta reconstruir playlists a partir das informações ainda legíveis. Nunca grava sobre o dispositivo original." Foreground="#57534C" FontSize="10" Margin="0,3,0,0"/></StackPanel>
+                  <Border Grid.Row="1" Style="{StaticResource Counter}" Margin="0,12,0,0"><TextBlock x:Name="ToolkitRecoveryStatusText" Text="Faça primeiro o diagnóstico do dispositivo" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/></Border>
+                  <Border Grid.Row="2" Style="{StaticResource Panel}" Margin="0,10,0,0"><StackPanel><TextBlock Text="LIMITES DA RECUPERAÇÃO" FontWeight="Bold"/><TextBlock Text="O CRIVO mostra antes o que é recuperável, parcial ou não confirmado. Tracks ausentes, ordem diferente, cues, loops, beatgrid ou waveform podem não ser recuperados. A saída é uma cópia preservada com playlists M3U8 para revisão e importação no Rekordbox; não é apresentada como um pendrive pronto para CDJ." TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20"/></StackPanel></Border>
+                  <Grid Grid.Row="3" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions><TextBlock Text="A ação só será liberada quando o CRIVO encontrar informações antigas do Rekordbox que ainda possam ser lidas." Foreground="#45413B" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/><Button x:Name="ToolkitFirstAidButton" Grid.Column="1" Content="REVISAR RECUPERAÇÃO" Style="{StaticResource PrimaryButton}" IsEnabled="False"/></Grid>
+                </Grid>
+              </TabItem>
+              <TabItem Header="COMPATIBILIDADE">
+                <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="280"/><ColumnDefinition Width="215"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="COMPATIBILIDADE COM EQUIPAMENTO" FontWeight="Bold" FontSize="12"/><TextBlock Text="Compara somente requisitos publicados em documentação oficial." Foreground="#57534C" FontSize="10" Margin="0,3,0,0"/></StackPanel><ComboBox x:Name="EquipmentProfileCombo" Grid.Column="1" DisplayMemberPath="Name" Margin="8,0"/><Button x:Name="ToolkitCompatibilityButton" Grid.Column="2" Content="VERIFICAR COMPATIBILIDADE" Style="{StaticResource PrimaryButton}" IsEnabled="False"/></Grid>
+                  <Border Grid.Row="1" Style="{StaticResource Counter}" Margin="0,10,0,0"><StackPanel><TextBlock Text="RESULTADO PARA O MODELO SELECIONADO" Foreground="#45413B" FontSize="10"/><TextBlock x:Name="ToolkitCompatibilityStatus" Text="Faça primeiro o diagnóstico do dispositivo" FontSize="17" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+                  <Border Grid.Row="2" Style="{StaticResource Panel}" Padding="0" Margin="0,10,0,0"><DataGrid x:Name="CompatibilityChecksGrid" IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow"><DataGrid.Columns><DataGridTextColumn Header="REQUISITO" Binding="{Binding Name}" Width="190"/><DataGridTextColumn Header="RESULTADO" Binding="{Binding Level}" Width="180"/><DataGridTextColumn Header="O QUE FOI COMPARADO" Binding="{Binding Summary}" Width="2*"/><DataGridTextColumn Header="LIMITES" Binding="{Binding Detail}" Width="2*"/></DataGrid.Columns></DataGrid></Border>
+                  <Grid Grid.Row="3" Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="225"/></Grid.ColumnDefinitions><TextBlock x:Name="CompatibilitySourceText" Text="O catálogo informa a fonte oficial, a data de revisão e o que não pôde ser confirmado." Foreground="#45413B" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center"/><Button x:Name="ToolkitOpenEquipmentSourceButton" Grid.Column="1" Content="ABRIR DOCUMENTAÇÃO OFICIAL" IsEnabled="False" Margin="8,0,0,0"/></Grid>
+                </Grid>
+              </TabItem>
+            </TabControl>
+          </Grid>
+        </TabItem>
       </TabControl>
       <Border Grid.Row="3" CornerRadius="0" Background="#A7A299" BorderBrush="#6F6A62" BorderThickness="0,1,0,0">
         <Grid Margin="17,0">
@@ -736,7 +797,8 @@
           </StackPanel>
           <TextBlock Grid.Column="1" Text="C — CURADORIA   •   R — REVISÃO   •   I — IDENTIFICAÇÃO   •   V — VALIDAÇÃO   •   O — ORGANIZAÇÃO" Foreground="#34312E" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="16,0" ToolTip="C — Curadoria • R — Revisão • I — Identificação • V — Validação • O — Organização" />
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock Text="CRIVO DJ por MANELZ0RD" Foreground="#45413B" FontSize="10" VerticalAlignment="Center" Margin="0,0,13,0" />
+            <TextBlock Text="CRIVO DJ v0.9.9 por MANELZ0RD" Foreground="#45413B" FontSize="10" VerticalAlignment="Center" Margin="0,0,13,0" />
+            <Button x:Name="SupportCrivoButton" Content="APOIE O CRIVO" Style="{StaticResource PrimaryButton}" Padding="10,4" MinWidth="104" FontSize="9" Margin="0,0,6,0" />
             <Button x:Name="UndoButton" Content="DESFAZER EXECUÇÃO" Padding="10,4" IsEnabled="False" />
             <Button x:Name="OpenHistoryButton" Content="HISTÓRICO" Padding="10,4" Margin="6,0,0,0" MinWidth="90" />
           </StackPanel>

@@ -67,6 +67,7 @@ try{
     foreach($folder in @('Music\A','Music\B')){[IO.Directory]::CreateDirectory((Join-Path $usb $folder))|Out-Null;[IO.File]::WriteAllBytes((Join-Path $usb "$folder\usb-copy.mp3"),[byte[]](91,92,93,94,95,96,97,98))}
     $usbAudit=Get-RekordboxUsbAudit -Root $usb -Settings $settings
     if($usbAudit.Total -ne 2 -or $usbAudit.DuplicatePaths -ne 2){throw "Duplicidade do pendrive falhou: total=$($usbAudit.Total), duplicadas=$($usbAudit.DuplicatePaths)."}
+    if(@($usbAudit.Rows|Where-Object{$_.Issues -match 'Dados faltantes:.*(BPM|tonalidade)'}).Count){throw 'BPM ou tonalidade foram tratados indevidamente como metadados obrigatórios do arquivo.'}
     if(@($usbAudit.Rows|Where-Object{$_.Codec -in @('DB','ANLZ') -and $_.DuplicateType}).Count){throw 'Arquivos internos do Rekordbox entraram indevidamente na comparação de áudio.'}
     Write-Output 'AUDITORIA STRESS OK: ausentes, unidades indisponíveis, qualidade, metadados, duplicatas exatas, possíveis, origens e pendrive.'
 }finally{if(Test-Path -LiteralPath $root){Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue}}

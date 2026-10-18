@@ -27,17 +27,84 @@ function Get-ODTObjectProperty {
     return $property.Value
 }
 
+function ConvertTo-ODTSpotifyCanonicalUrl {
+    param([Parameter(Mandatory)][string]$Url)
+    try {$uri=[Uri]$Url}catch{throw 'O link do Spotify não é válido.'}
+    if($uri.Scheme -notin @('http','https') -or $uri.Host -notmatch '(?i)(^|\.)spotify\.com$'){
+        throw 'Use um link do Spotify.'
+    }
+    $parts=@($uri.AbsolutePath.Trim('/') -split '/' | Where-Object {$_})
+    if($parts.Count -ge 3 -and $parts[0] -match '(?i)^intl-[a-z]{2}(?:-[a-z]{2})?$'){$parts=@($parts[1..($parts.Count-1)])}
+    if($parts.Count -lt 2 -or $parts[0] -notin @('track','album','playlist') -or $parts[1] -notmatch '^[A-Za-z0-9]+$'){
+        throw 'Use um link de faixa, álbum ou playlist do Spotify.'
+    }
+    # Remove idioma e parâmetros de compartilhamento. O resolvedor recebe uma
+    # URL estável, igual para links copiados em qualquer região do Spotify.
+    return "https://open.spotify.com/$($parts[0].ToLowerInvariant())/$($parts[1])"
+}
+
 function Find-DownloadedTrackFile {
     param([Parameter(Mandatory)]$Download)
     if(-not(Test-Path -LiteralPath $Download.OutputFolder -PathType Container)){return $null}
     $identity=([string]$Download.Title).ToLowerInvariant() -replace '[^\p{L}\p{Nd}]',''
     if($identity.Length -lt 3 -or $Download.Title -eq 'Lendo dados da faixa...'){return $null}
-    foreach($file in @(Get-ChildItem -LiteralPath $Download.OutputFolder -File -ErrorAction SilentlyContinue)){
+    $startedAt=Get-ODTObjectProperty $Download 'StartedAt' $null
+    $allowExisting=[bool](Get-ODTObjectProperty $Download 'AllowExistingFile' $false)
+    foreach($file in @(Get-ChildItem -LiteralPath $Download.OutputFolder -File -ErrorAction SilentlyContinue|Sort-Object LastWriteTimeUtc -Descending)){
         if($file.Extension.ToLowerInvariant() -notin @('.mp3','.wav','.flac','.aiff','.aif','.m4a','.aac','.ogg','.opus','.webm')){continue}
         $candidate=$file.BaseName.ToLowerInvariant() -replace '[^\p{L}\p{Nd}]',''
-        if($candidate.Contains($identity)){return $file}
+        if(-not$candidate.Contains($identity)){continue}
+        if(-not$allowExisting -and $startedAt -and $file.LastWriteTimeUtc -lt ([datetime]$startedAt).ToUniversalTime().AddSeconds(-3)){continue}
+        $confirmed=Confirm-ODTDownloadedFile -Download $Download -File $file
+        if($confirmed){return $confirmed}
     }
     return $null
+}
+
+function Confirm-ODTDownloadedFile {
+    param([Parameter(Mandatory)]$Download,[Parameter(Mandatory)]$File)
+    try{
+        $item=if($File -is [IO.FileInfo]){$File}else{Get-Item -LiteralPath ([string]$File) -ErrorAction Stop}
+        if(-not$item -or -not$item.Exists -or $item.PSIsContainer){return $null}
+        if($item.Extension.ToLowerInvariant() -notin @('.mp3','.wav','.flac','.aiff','.aif','.m4a','.aac','.ogg','.opus','.webm')){return $null}
+        # Arquivos vazios, cabeçalhos e fragmentos interrompidos não podem virar
+        # "Concluído". 16 KiB é deliberadamente conservador e muito abaixo de
+        # qualquer track de áudio utilizável.
+        if($item.Length -lt 16384){return $null}
+        $root=[IO.Path]::GetFullPath([string]$Download.OutputFolder).TrimEnd([IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)+[IO.Path]::DirectorySeparatorChar
+        $full=[IO.Path]::GetFullPath($item.FullName)
+        if(-not$full.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){return $null}
+        $stream=[IO.File]::Open($full,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
+        try{if($stream.Length -lt 16384){return $null}}finally{$stream.Dispose()}
+        return $item
+    }catch{return $null}
+}
+
+function Set-ODTDownloadedMetadata {
+    param([Parameter(Mandatory)]$Download,[Parameter(Mandatory)][System.IO.FileInfo]$File)
+    if([bool](Get-ODTObjectProperty $Download 'MetadataApplied' $false)){return}
+    $title=[string](Get-ODTObjectProperty $Download 'RequestedTitle' '')
+    $artist=[string](Get-ODTObjectProperty $Download 'RequestedArtist' '')
+    $thumbnail=[string](Get-ODTObjectProperty $Download 'RequestedThumbnail' '')
+    $tagLibPath=Join-Path (Split-Path -Parent $PSScriptRoot) 'lib\TagLibSharp.dll'
+    if((-not$title -and -not$artist -and -not$thumbnail) -or -not(Test-Path -LiteralPath $tagLibPath -PathType Leaf)){$Download|Add-Member NoteProperty MetadataApplied $true -Force;return}
+    try{[void](Import-PortableAssembly -Path $tagLibPath -TypeName 'TagLib.File')}catch{return}
+    $tagFile=$null
+    try{
+        $tagFile=[TagLib.File]::Create($File.FullName)
+        if($title){$tagFile.Tag.Title=$title}
+        if($artist){$performers=@($artist -split '\s*,\s*'|Where-Object{$_});if($performers.Count){$tagFile.Tag.Performers=[string[]]$performers}}
+        if($thumbnail -match '^https?://'){
+            try{
+                $client=New-Object Net.WebClient
+                try{$bytes=$client.DownloadData($thumbnail);$contentType=[string]$client.ResponseHeaders['Content-Type']}finally{$client.Dispose()}
+                if($bytes.Count -gt 0){$picture=New-Object TagLib.Picture;$picture.Data=New-Object TagLib.ByteVector -ArgumentList (,([byte[]]$bytes));$picture.MimeType=$(if($contentType){$contentType.Split(';')[0]}else{'image/jpeg'});$picture.Type=[TagLib.PictureType]::FrontCover;$picture.Description='Capa';$tagFile.Tag.Pictures=[TagLib.IPicture[]]@($picture)}
+            }catch{}
+        }
+        $tagFile.Save()
+        if($tagFile.Properties.AudioBitrate -gt 0){$Download.Quality="MP3 $([int]$tagFile.Properties.AudioBitrate) kbps — qualidade disponível na fonte"}
+        $Download|Add-Member NoteProperty MetadataApplied $true -Force
+    }catch{}finally{if($tagFile){$tagFile.Dispose()}}
 }
 
 function Get-DownloadFailureDetail {
@@ -47,7 +114,7 @@ function Get-DownloadFailureDetail {
         return 'O resolvedor do SoundCloud recebeu 404 ao buscar os dados. Isso pode ser link privado/expirado, playlist removida ou uma indisponibilidade/alteração temporária da API (também pode afetar playlists públicas). Para privada, copie o link secreto completo pela opção Compartilhar; para pública, confirme que abre no navegador e tente novamente mais tarde.'
     }
     if($Text -match '(?is)\[soundcloud(?::set)?\].*(?:HTTP\s*Error\s*(?:401|403)|Unauthorized|Forbidden|private)'){
-        return 'O SoundCloud recusou o acesso a esta playlist. Verifique se ela é pública ou cole o link secreto completo da playlist privada.'
+        return 'O SoundCloud recusou o acesso a esta track ou playlist. Ela pode exigir autorização, ter o download bloqueado ou usar um link privado/expirado. Se for privada, cole o link secreto completo; se abrir normalmente no navegador, tente novamente mais tarde.'
     }
     $errors=@($lines | Where-Object {$_ -match '(^ERROR:|\[error\]|error|failed|unable)'})
     if($errors.Count){return $errors[$errors.Count-1]}
@@ -144,7 +211,7 @@ function Start-ODTDownload {
     $process=Start-Process -FilePath $EnginePath -ArgumentList ($arguments -join ' ') -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $hostName=try{([Uri]$Url).Host}catch{'Busca externa'};$format=if($Quality -eq 'Original'){'Audio original'}else{"MP3 ${Quality} kbps"}
     $title=if($InitialTitle){$InitialTitle}else{'Lendo dados da faixa...'};$source=if($Provider){$Provider}elseif($InitialSource){$InitialSource}else{$hostName};$shownUrl=if($DisplayUrl){$DisplayUrl}else{$Url}
-    return [pscustomobject]@{Kind='Download';Id=$id;IsSelected=$true;Title=$title;Artist=$InitialSource;Provider=$Provider;Source=$source;Duration=$InitialDuration;Thumbnail=$InitialThumbnail;Url=$shownUrl;DownloadUrl=$Url;LockMetadata=[bool]$InitialTitle;Quality=$format;QualityCode=$Quality;Status='Baixando';Progress='0%';ProgressValue=0;Detail='Conectando...';Process=$process;EnginePath=$EnginePath;FFmpegPath=$FFmpegPath;StdOutPath=$stdout;StdErrPath=$stderr;StartedAt=Get-Date;FinishedAt=$null;OutputFolder=$pending;FinalPath='';FallbackAttempted=([string]$Url -match '^ytsearch\d*:');OriginalFailure=''}
+    return [pscustomobject]@{Kind='Download';Id=$id;IsSelected=$true;Title=$title;Artist=$InitialSource;Provider=$Provider;Source=$source;Duration=$InitialDuration;Thumbnail=$InitialThumbnail;Url=$shownUrl;DownloadUrl=$Url;LockMetadata=[bool]$InitialTitle;RequestedTitle=$InitialTitle;RequestedArtist=$InitialSource;RequestedThumbnail=$InitialThumbnail;MetadataApplied=$false;Quality=$format;QualityCode=$Quality;Status='Baixando';Progress='0%';ProgressValue=0;Detail='Conectando...';Process=$process;EnginePath=$EnginePath;FFmpegPath=$FFmpegPath;StdOutPath=$stdout;StdErrPath=$stderr;StartedAt=Get-Date;FinishedAt=$null;OutputFolder=$pending;FinalPath='';FallbackAttempted=([string]$Url -match '^ytsearch\d*:');OriginalFailure=''}
 }
 
 function Start-ODTSpotifyResolver {
@@ -155,7 +222,7 @@ function Start-ODTSpotifyResolver {
         [string]$FFmpegPath='',
         [ValidateSet('Original','128','192','256','320')][string]$Quality='320'
     )
-    if($Url -notmatch '^https?://(open\.)?spotify\.com/(playlist|album|track)/'){throw 'Use um link de faixa, album ou playlist do Spotify.'}
+    $Url=ConvertTo-ODTSpotifyCanonicalUrl -Url $Url
     if(-not(Test-Path -LiteralPath $EnginePath -PathType Leaf)){throw "Resolvedor Spotify nao encontrado: $EnginePath"}
     [IO.Directory]::CreateDirectory($OutputRoot)|Out-Null
     $logRoot=Join-Path (Get-AppDataRoot) 'DownloadLogs';[IO.Directory]::CreateDirectory($logRoot)|Out-Null
@@ -165,6 +232,62 @@ function Start-ODTSpotifyResolver {
     if($FFmpegPath){$arguments.Add((ConvertTo-ProcessArgument '--ffmpeg'));$arguments.Add((ConvertTo-ProcessArgument $FFmpegPath))}
     $process=Start-Process -FilePath $EnginePath -ArgumentList ($arguments -join ' ') -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     return [pscustomobject]@{Kind='SpotifyResolver';Id=$id;IsSelected=$true;Title='Lendo playlist do Spotify...';Source='Spotify';Duration='';Thumbnail='';Url=$Url;Quality=$(if($Quality -eq 'Original'){'Audio original'}else{"MP3 ${Quality} kbps"});QualityCode=$Quality;Status='Analisando';Progress='0%';ProgressValue=0;Detail='Separando a playlist em tracks';Process=$process;StdOutPath=$stdout;StdErrPath=$stderr;SaveFile=$saveFile;OutputFolder=$OutputRoot;StartedAt=Get-Date;TimeoutSeconds=300;FinishedAt=$null;Expanded=$false}
+}
+
+function Start-ODTSpotifySourceResolver {
+    param(
+        [Parameter(Mandatory)][string]$SpotifyUrl,
+        [Parameter(Mandatory)][string]$OutputRoot,
+        [Parameter(Mandatory)][string]$SpotifyEnginePath,
+        [Parameter(Mandatory)][string]$DownloadEnginePath,
+        [string]$FFmpegPath='',
+        [ValidateSet('Original','128','192','256','320')][string]$Quality='320',
+        [string]$Title='',
+        [string]$Artist='',
+        [string]$Duration='',
+        [string]$Thumbnail=''
+    )
+    $SpotifyUrl=ConvertTo-ODTSpotifyCanonicalUrl -Url $SpotifyUrl
+    if(-not(Test-Path -LiteralPath $SpotifyEnginePath -PathType Leaf)){throw "Resolvedor Spotify não encontrado: $SpotifyEnginePath"}
+    if(-not(Test-Path -LiteralPath $DownloadEnginePath -PathType Leaf)){throw "Motor de download não encontrado: $DownloadEnginePath"}
+    $logRoot=Join-Path (Get-AppDataRoot) 'DownloadLogs';[IO.Directory]::CreateDirectory($logRoot)|Out-Null
+    $id=Get-Date -Format 'yyyyMMdd-HHmmssfff';$stdout=Join-Path $logRoot "$id.spotify-source.out.log";$stderr=Join-Path $logRoot "$id.spotify-source.err.log"
+    $arguments=New-Object Collections.Generic.List[string]
+    foreach($value in @('url',$SpotifyUrl,'--audio','youtube-music','youtube','soundcloud','bandcamp','--headless','--threads','1','--print-errors')){$arguments.Add((ConvertTo-ProcessArgument $value))}
+    if($FFmpegPath){$arguments.Add((ConvertTo-ProcessArgument '--ffmpeg'));$arguments.Add((ConvertTo-ProcessArgument $FFmpegPath))}
+    $process=Start-Process -FilePath $SpotifyEnginePath -ArgumentList ($arguments -join ' ') -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    return [pscustomobject]@{Kind='SpotifySourceResolver';Id=$id;IsSelected=$true;Title=$Title;Artist=$Artist;Provider='Spotify';Source='Spotify';Duration=$Duration;Thumbnail=$Thumbnail;Url=$SpotifyUrl;DownloadUrl=$SpotifyUrl;Quality=$(if($Quality -eq 'Original'){'Áudio original'}else{"MP3 ${Quality} kbps"});QualityCode=$Quality;Status='Buscando fonte';Progress='5%';ProgressValue=5;Detail='Procurando a versão correspondente no YouTube Music, YouTube, SoundCloud e Bandcamp';Process=$process;EnginePath=$DownloadEnginePath;FFmpegPath=$FFmpegPath;StdOutPath=$stdout;StdErrPath=$stderr;StartedAt=Get-Date;TimeoutSeconds=150;FinishedAt=$null;OutputFolder=$OutputRoot}
+}
+
+function Complete-ODTSpotifySourceResolver {
+    param([Parameter(Mandatory)]$Resolver)
+    $Resolver.Process.Refresh()
+    if(-not$Resolver.Process.HasExited){
+        if(((Get-Date)-[datetime]$Resolver.StartedAt).TotalSeconds -gt [int]$Resolver.TimeoutSeconds){
+            try{$Resolver.Process.Kill();$Resolver.Process.WaitForExit()}catch{}
+            $Resolver.Status='Falhou';$Resolver.Progress='';$Resolver.ProgressValue=0;$Resolver.Detail='A busca por uma fonte compatível demorou demais. Tente novamente.'
+        }
+        return $Resolver
+    }
+    try{$Resolver.Process.WaitForExit()}catch{};$Resolver.FinishedAt=Get-Date
+    $text=(Read-SharedUtf8Text -Path $Resolver.StdOutPath)+"`n"+(Read-SharedUtf8Text -Path $Resolver.StdErrPath)
+    $urls=@([regex]::Matches($text,'(?im)^\s*(https?://[^\s]+)\s*$')|ForEach-Object{$_.Groups[1].Value.Trim()}|Where-Object{$_ -notmatch '(?i)(^|\.)spotify\.com/'})
+    if(-not$urls.Count){
+        $Resolver.Status='Falhou';$Resolver.Progress='';$Resolver.ProgressValue=0
+        $Resolver.Detail='Nenhuma fonte compatível foi encontrada automaticamente. Você pode adquirir a track em uma loja e depois usar Organizar músicas que você já possui.'
+        return $Resolver
+    }
+    $sourceUrl=[string]$urls[-1]
+    try{
+        $download=Start-ODTDownload -Url $sourceUrl -DisplayUrl ([string]$Resolver.Url) -InitialTitle ([string]$Resolver.Title) -InitialSource ([string]$Resolver.Artist) -Provider 'Spotify → fonte correspondente' -InitialDuration ([string]$Resolver.Duration) -InitialThumbnail ([string]$Resolver.Thumbnail) -OutputRoot ([string]$Resolver.OutputFolder) -EnginePath ([string]$Resolver.EnginePath) -FFmpegPath ([string]$Resolver.FFmpegPath) -Quality ([string]$Resolver.QualityCode)
+        $download.IsSelected=[bool]$Resolver.IsSelected
+        $download.Detail='Fonte correspondente encontrada; iniciando download'
+        $download|Add-Member NoteProperty MatchedSourceUrl $sourceUrl -Force
+        return $download
+    }catch{
+        $Resolver.Status='Falhou';$Resolver.Progress='';$Resolver.ProgressValue=0;$Resolver.Detail=$_.Exception.Message
+        return $Resolver
+    }
 }
 
 function Start-ODTPlaylistResolver {
@@ -204,7 +327,7 @@ function New-ODTSingleTrackFallback {
 
 function Complete-ODTPlaylistResolver {
     param([Parameter(Mandatory)]$Resolver)
-    $Resolver.Process.Refresh();if(Test-ResolverTimeout -Resolver $Resolver){return @()};if(-not$Resolver.Process.HasExited){return @()};$Resolver.Process.WaitForExit();$Resolver.FinishedAt=Get-Date;$text=Read-SharedUtf8Text -Path $Resolver.StdOutPath;$exitCode=[int]$Resolver.Process.ExitCode
+    $Resolver.Process.Refresh();if(Test-ResolverTimeout -Resolver $Resolver){return};if(-not$Resolver.Process.HasExited){return};$Resolver.Process.WaitForExit();$Resolver.FinishedAt=Get-Date;$text=Read-SharedUtf8Text -Path $Resolver.StdOutPath;$exitCode=[int]$Resolver.Process.ExitCode
     if($exitCode -ne 0){
         $errorText=$text+"`n"+(Read-SharedUtf8Text -Path $Resolver.StdErrPath)
         if([string]$Resolver.Url -match '(?i)^https?://(?:www\.)?soundcloud\.com/[^/]+/sets/[^/?#]+/?(?:[?#].*)?$' -and $errorText -match '(?i)HTTP\s*Error\s*404|404\s*Not\s*Found'){
@@ -272,7 +395,7 @@ function Complete-ODTSpotifyResolver {
         if($null -eq $song){continue};$artist=[string](Get-ODTObjectProperty $song 'artist' '');if(-not$artist){$artist=@(Get-ODTObjectProperty $song 'artists' @())-join ', '};$title=[string](Get-ODTObjectProperty $song 'name' '');if(-not$title){continue}
         $seconds=0;[void][int]::TryParse([string](Get-ODTObjectProperty $song 'duration' 0),[ref]$seconds);$duration=if($seconds -gt 0){'{0}:{1:00}' -f [int][Math]::Floor($seconds/60),($seconds%60)}else{''}
         $thumbnail=[string](Get-ODTObjectProperty $song 'cover_url' '');if(-not$thumbnail){$thumbnail=[string](Get-ODTObjectProperty $song 'cover' '')};$songUrl=[string](Get-ODTObjectProperty $song 'url' '')
-        $items.Add([pscustomobject]@{Kind='TrackRequest';IsSelected=$true;Title=$title;Artist=$artist;Source='Spotify';Duration=$duration;Thumbnail=$thumbnail;Url=$songUrl;DownloadUrl="ytsearch1:$artist - $title audio";Quality=$Resolver.Quality;QualityCode=$Resolver.QualityCode;Status='Pronto';Progress='';ProgressValue=0;Detail='Marque e clique em Iniciar download';Process=$null;OutputFolder=$Resolver.OutputFolder})
+        $items.Add([pscustomobject]@{Kind='TrackRequest';IsSelected=$true;Title=$title;Artist=$artist;Source='Spotify';Duration=$duration;Thumbnail=$thumbnail;Url=$songUrl;DownloadUrl=$songUrl;SpotifySourceUrl=$songUrl;Quality=$Resolver.Quality;QualityCode=$Resolver.QualityCode;Status='Pronto';Progress='';ProgressValue=0;Detail='Ao baixar, o CRIVO procurará uma fonte correspondente';Process=$null;OutputFolder=$Resolver.OutputFolder})
     }
     if(-not$items.Count){$Resolver.Status='Falhou';$Resolver.Progress='';$Resolver.ProgressValue=0;$Resolver.Detail='O Spotify não retornou nenhuma track utilizável.';return @()}
     $Resolver.Status='Expandida';$Resolver.Progress='100%';$Resolver.ProgressValue=100;$Resolver.Detail="$($items.Count) tracks adicionadas a fila";$Resolver.Expanded=$true
@@ -292,11 +415,15 @@ function Get-ODTDownloadProgress {
         try{$Download.Process.WaitForExit()}catch{};$Download.Process.Refresh()
         $Download.FinishedAt=Get-Date
         $exitCode=[int]$Download.Process.ExitCode
-        $existing=$null;if($Download.PSObject.Properties['FinalPath'] -and $Download.FinalPath -and (Test-Path -LiteralPath $Download.FinalPath -PathType Leaf)){$existing=Get-Item -LiteralPath $Download.FinalPath}else{$existing=Find-DownloadedTrackFile -Download $Download}
+        $Download|Add-Member NoteProperty AllowExistingFile ([bool]($text -match '(?i)has already been downloaded|already exists|já (?:foi )?baixad')) -Force
+        $existing=$null
+        if($Download.PSObject.Properties['FinalPath'] -and $Download.FinalPath){$existing=Confirm-ODTDownloadedFile -Download $Download -File $Download.FinalPath}
+        if(-not$existing){$existing=Find-DownloadedTrackFile -Download $Download}
         if($existing){
+            Set-ODTDownloadedMetadata -Download $Download -File $existing
             $Download.Status='Concluido';$progress='100%';$progressValue=100
             if($Download.PSObject.Properties['FinalPath']){$Download.FinalPath=$existing.FullName}else{$Download|Add-Member NoteProperty FinalPath $existing.FullName}
-            $Download.Detail=if($exitCode -ne 0 -and $existing){'A faixa ja existia no destino'}else{'Pronto para organizar'}
+            $Download.Detail=if($exitCode -ne 0 -and $existing){"A track já existia em $($existing.DirectoryName)"}else{"Salva e pronta para organizar em $($existing.DirectoryName)"}
         }else{
             $failure=Get-DownloadFailureDetail -Text $text -ExitCode $exitCode
             $fallbackAttempted=[bool](Get-ODTObjectProperty $Download 'FallbackAttempted' $false)
@@ -327,4 +454,4 @@ function Get-ODTDownloadProgress {
     $Download.Progress=$progress;$Download.ProgressValue=$progressValue;return $Download
 }
 
-Export-ModuleMember -Function Start-ODTDownload,Get-ODTDownloadProgress,Start-ODTSpotifyResolver,Complete-ODTSpotifyResolver,Start-ODTPlaylistResolver,Complete-ODTPlaylistResolver
+Export-ModuleMember -Function Start-ODTDownload,Get-ODTDownloadProgress,Start-ODTSpotifyResolver,Complete-ODTSpotifyResolver,Start-ODTSpotifySourceResolver,Complete-ODTSpotifySourceResolver,Start-ODTPlaylistResolver,Complete-ODTPlaylistResolver,ConvertTo-ODTSpotifyCanonicalUrl,Confirm-ODTDownloadedFile

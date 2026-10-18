@@ -5,7 +5,7 @@ $script:TagLibAvailable = $false
 $script:ShellBpmColumn = -2
 $tagLibPath = Join-Path (Get-AppRoot) 'lib\TagLibSharp.dll'
 if (Test-Path -LiteralPath $tagLibPath) {
-    try { Add-Type -Path $tagLibPath -ErrorAction Stop; $script:TagLibAvailable = $true } catch { }
+    try { $script:TagLibAvailable = [bool](Import-PortableAssembly -Path $tagLibPath -TypeName 'TagLib.File') } catch { }
 }
 
 function Get-ShellAudioProperties {

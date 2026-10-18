@@ -201,6 +201,60 @@ function Get-RekordboxAudit {
     return [pscustomobject]@{Mode='Library';Rows=$rows.ToArray();Total=$libraryTracks.Count;Playlists=@($Library.Playlists).Count;MissingFiles=$missing;UnavailableFiles=$unavailable;QualityIssues=$quality;MetadataIssues=$metadata;AnalysisIssues=$analysis;DataProblems=@($rows|Where-Object{$_.IssueCategories -match '(^|;)(Metadata|Analysis)(;|$)'}).Count;Problems=$problem;DuplicatePaths=$duplicates;PossibleDuplicates=[int]$findings.PossibleDuplicates;LocationIssues=[int]$findings.LocationIssues;SourceFolders=[int]$findings.SourceFolders;StorageRoots=[int]$findings.StorageRoots;UnmatchedLocal=$unmatchedLocal}
 }
 
+function Test-RekordboxDeviceLibraryStructure {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $invalidPages=New-Object Collections.Generic.List[int]
+    $problems=New-Object Collections.Generic.List[string]
+    $stream=$null
+    try {
+        $stream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
+        if($stream.Length -lt 4096){
+            $problems.Add("O banco possui somente $($stream.Length) byte(s); o cabeçalho mínimo ocupa 4096 bytes.")
+        }else{
+            $header=New-Object byte[] 32
+            if($stream.Read($header,0,$header.Length) -ne $header.Length){throw 'Não foi possível ler o cabeçalho completo.'}
+            $pageSize=[BitConverter]::ToUInt32($header,4)
+            $nextUnused=[BitConverter]::ToUInt32($header,12)
+            if($pageSize -ne 4096){$problems.Add("Tamanho de página inesperado: $pageSize byte(s).")}
+            elseif(($stream.Length % $pageSize) -ne 0){$problems.Add("O tamanho do banco não corresponde a páginas completas de $pageSize bytes.")}
+            else{
+                $pageCount=[int]($stream.Length/$pageSize)
+                if($nextUnused -lt $pageCount){$problems.Add("O índice da próxima página ($nextUnused) é anterior ao final físico do banco ($pageCount páginas).")}
+                $pageHeader=New-Object byte[] 12
+                for($page=1;$page -lt $pageCount;$page++){
+                    $stream.Position=[int64]$page*$pageSize
+                    if($stream.Read($pageHeader,0,$pageHeader.Length) -ne $pageHeader.Length){$invalidPages.Add($page);continue}
+                    $storedIndex=[BitConverter]::ToUInt32($pageHeader,4)
+                    $pageType=[BitConverter]::ToUInt32($pageHeader,8)
+                    # Índice zero representa página livre. Páginas ocupadas devem
+                    # apontar para a própria posição e usar um tipo conhecido (0-19).
+                    if((($storedIndex -ne 0) -and ($storedIndex -ne $page)) -or $pageType -gt 19){$invalidPages.Add($page)}
+                }
+                if($invalidPages.Count){
+                    $sample=@($invalidPages|Select-Object -First 8) -join ', '
+                    $suffix=if($invalidPages.Count -gt 8){'…'}else{''}
+                    $problems.Add("$($invalidPages.Count) parte(s) da biblioteca não puderam ser lidas com segurança. Detalhe técnico: páginas $sample$suffix possuem cabeçalho incoerente.")
+                }
+            }
+        }
+    }catch{
+        $problems.Add($_.Exception.Message)
+    }finally{
+        if($stream){$stream.Dispose()}
+    }
+
+    [pscustomobject]@{
+        Checked=$true
+        IsConsistent=($problems.Count -eq 0)
+        ProblemCount=$problems.Count
+        InvalidPageCount=$invalidPages.Count
+        InvalidPages=$invalidPages.ToArray()
+        Detail=if($problems.Count){$problems -join ' '}else{'Cabeçalho, tamanho e índices das páginas básicas estão coerentes.'}
+        Limitation='Este teste detecta danos estruturais básicos; não confirma sozinho todas as faixas e referências de playlists.'
+    }
+}
+
 function Get-RekordboxUsbAudit {
     param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)]$Settings,[scriptblock]$OnProgress)
     if(-not(Test-Path -LiteralPath $Root -PathType Container)){throw "Dispositivo não encontrado: $Root"}
@@ -213,18 +267,36 @@ function Get-RekordboxUsbAudit {
         if($technical.QualityIssue){$issues.Add([string]$technical.QualityIssue);$categories.Add('Quality')}
         $meta=$technical.Metadata
         $missingMetadata=New-Object Collections.Generic.List[string]
-        if($meta){if(-not$meta.HasTitleMetadata){$missingMetadata.Add('título')};if(-not$meta.Artist){$missingMetadata.Add('artista')};if(-not$meta.Album){$missingMetadata.Add('álbum')};if(-not$meta.Genre){$missingMetadata.Add('gênero')};if(-not$meta.Year){$missingMetadata.Add('ano')};if(-not$meta.Bpm){$missingMetadata.Add('BPM')};if(-not$meta.Key){$missingMetadata.Add('tonalidade')}}
+        # BPM e tonalidade dependem normalmente da análise do software DJ e não
+        # são tratados como tags obrigatórias do arquivo de áudio.
+        if($meta){if(-not$meta.HasTitleMetadata){$missingMetadata.Add('título')};if(-not$meta.Artist){$missingMetadata.Add('artista')};if(-not$meta.Album){$missingMetadata.Add('álbum')};if(-not$meta.Genre){$missingMetadata.Add('gênero')};if(-not$meta.Year){$missingMetadata.Add('ano')}}
         if($missingMetadata.Count){$issues.Add('Dados faltantes: '+($missingMetadata -join ', '));$categories.Add('Metadata')}
         $issueType=if($categories.Contains('Integrity')){'Arquivo suspeito'}elseif($categories.Contains('Quality')){'Qualidade suspeita'}elseif($categories.Contains('Metadata')){'Dados faltantes'}else{'OK'}
         $rows.Add([pscustomobject]@{TrackID='';Title=$(if($meta -and $meta.Title){$meta.Title}else{$file.BaseName});Artist=$(if($meta){$meta.Artist}else{''});Album=$(if($meta){$meta.Album}else{''});Genre=$(if($meta){$meta.Genre}else{''});Year=$(if($meta){$meta.Year}else{''});Bpm=$(if($meta){$meta.Bpm}else{''});Key=$(if($meta){$meta.Key}else{''});Bitrate=$technical.Bitrate;SampleRate=$technical.SampleRate;Codec=$technical.Codec;Analysis='—';Location=$file.FullName;Exists=$true;Readable=$technical.Readable;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories=$categories -join ';';IssueType=$issueType;IssueCount=$issues.Count;Issues=$(if($issues.Count){$issues -join '; '}else{'Nenhum problema encontrado'});DuplicateType='';SourceFolder='';FolderDepth=0;StorageRoot='';FileSize=[int64]$technical.Size})
     }
-    $rekordboxRoot=Join-Path $rootPath 'PIONEER\rekordbox';$structureIssues=0;$analysisIssues=0
+    $rekordboxRoot=Join-Path $rootPath 'PIONEER\rekordbox';$structureIssues=0;$analysisIssues=0;$databaseStructureChecked=$false;$invalidDatabasePages=0
     if(-not(Test-Path -LiteralPath $rekordboxRoot -PathType Container)){
         $structureIssues++;$rows.Add([pscustomobject]@{TrackID='';Title='Estrutura do Rekordbox';Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='';Analysis='—';Location=$rekordboxRoot;Exists=$false;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Structure';IssueType='Estrutura ausente';IssueCount=1;Issues='A pasta PIONEER\rekordbox não foi encontrada'})
     }else{
         $databases=@(Get-ChildItem -LiteralPath $rekordboxRoot -File -Recurse -ErrorAction SilentlyContinue|Where-Object{$_.Name -in @('export.pdb','exportLibrary.db','master.db')})
         if(-not$databases.Count){$structureIssues++;$rows.Add([pscustomobject]@{TrackID='';Title='Banco do dispositivo';Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='DB';Analysis='—';Location=$rekordboxRoot;Exists=$false;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Structure';IssueType='Banco ausente';IssueCount=1;Issues='Nenhum banco exportado do Rekordbox foi localizado'})}
-        foreach($database in $databases){try{if($database.Length -eq 0){throw 'Banco vazio'};$stream=[IO.File]::Open($database.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite);$stream.Dispose()}catch{$structureIssues++;$rows.Add([pscustomobject]@{TrackID='';Title=$database.Name;Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='DB';Analysis='—';Location=$database.FullName;Exists=$true;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Structure';IssueType='Banco ilegível';IssueCount=1;Issues=$_.Exception.Message})}}
+        foreach($database in $databases){
+            try{
+                if($database.Length -eq 0){throw 'Banco vazio'}
+                $stream=[IO.File]::Open($database.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite);$stream.Dispose()
+                if($database.Name -ieq 'export.pdb'){
+                    $databaseStructureChecked=$true
+                    $validation=Test-RekordboxDeviceLibraryStructure -Path $database.FullName
+                    $invalidDatabasePages+=[int]$validation.InvalidPageCount
+                    if(-not$validation.IsConsistent){
+                        $structureIssues++
+                        $rows.Add([pscustomobject]@{TrackID='';Title='Biblioteca do Rekordbox';Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='DB';Analysis='—';Location=$database.FullName;Exists=$true;Readable=$true;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Structure';IssueType='Biblioteca parcialmente danificada';IssueCount=1;Issues="$($validation.Detail) O CRIVO não alterou o dispositivo. $($validation.Limitation)";DuplicateType='';SourceFolder='';FolderDepth=0;StorageRoot='';FileSize=[int64]$database.Length})
+                    }
+                }
+            }catch{
+                $structureIssues++;$rows.Add([pscustomobject]@{TrackID='';Title=$database.Name;Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='DB';Analysis='—';Location=$database.FullName;Exists=$true;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Structure';IssueType='Banco ilegível';IssueCount=1;Issues=$_.Exception.Message})
+            }
+        }
     }
     $analysisRoot=Join-Path $rootPath 'PIONEER\USBANLZ';[object[]]$analysisFiles=@();if(Test-Path -LiteralPath $analysisRoot -PathType Container){$analysisFiles=@(Get-ChildItem -LiteralPath $analysisRoot -File -Recurse -ErrorAction SilentlyContinue|Where-Object{$_.Extension.ToUpperInvariant() -in @('.DAT','.EXT','.2EX')})}
     if(-not$analysisFiles.Count){$analysisIssues++;$rows.Add([pscustomobject]@{TrackID='';Title='Dados de análise';Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='ANLZ';Analysis='Ausente';Location=$analysisRoot;Exists=$false;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Analysis;Structure';IssueType='Análise ausente';IssueCount=1;Issues='Nenhum arquivo de análise do Rekordbox foi encontrado'})}
@@ -233,7 +305,7 @@ function Get-RekordboxUsbAudit {
         if($problem){$analysisIssues++;$rows.Add([pscustomobject]@{TrackID='';Title=$analysisFile.Name;Artist='';Genre='';Bpm='';Key='';Bitrate=0;SampleRate=0;Codec='ANLZ';Analysis='Incompleta';Location=$analysisFile.FullName;Exists=$true;Readable=$false;PlaylistCount=0;MatchedLocal=$false;LocalOnly=$false;IssueCategories='Analysis;Structure';IssueType='Análise incompleta';IssueCount=1;Issues=$problem})}
     }
     $findings=Add-AuditDuplicateAndLocationFindings -Rows $rows.ToArray() -ScopeRoot $rootPath -AudioExtensions $Settings.AudioExtensions;$quality=@($rows|Where-Object{$_.IssueCategories -match '(^|;)Quality(;|$)'}).Count;$metadata=@($rows|Where-Object{$_.IssueCategories -match '(^|;)Metadata(;|$)'}).Count;$integrity=@($rows|Where-Object{$_.IssueCategories -match '(^|;)Integrity(;|$)'}).Count;$problem=@($rows|Where-Object{$_.IssueCount -gt 0}).Count
-    return [pscustomobject]@{Mode='Usb';Root=$rootPath;Rows=$rows.ToArray();Total=$audioFiles.Count;Playlists=0;MissingFiles=$integrity;QualityIssues=$quality;MetadataIssues=$metadata;AnalysisIssues=$analysisIssues;DataProblems=($metadata+$analysisIssues+$structureIssues);Problems=$problem;DuplicatePaths=[int]$findings.ExactDuplicates;PossibleDuplicates=[int]$findings.PossibleDuplicates;LocationIssues=[int]$findings.LocationIssues;SourceFolders=[int]$findings.SourceFolders;StorageRoots=[int]$findings.StorageRoots;UnmatchedLocal=0;StructureIssues=$structureIssues;AnalysisFileCount=$analysisFiles.Count}
+    return [pscustomobject]@{Mode='Usb';Root=$rootPath;Rows=$rows.ToArray();Total=$audioFiles.Count;Playlists=0;MissingFiles=$integrity;QualityIssues=$quality;MetadataIssues=$metadata;AnalysisIssues=$analysisIssues;DataProblems=($metadata+$analysisIssues+$structureIssues);Problems=$problem;DuplicatePaths=[int]$findings.ExactDuplicates;PossibleDuplicates=[int]$findings.PossibleDuplicates;LocationIssues=[int]$findings.LocationIssues;SourceFolders=[int]$findings.SourceFolders;StorageRoots=[int]$findings.StorageRoots;UnmatchedLocal=0;StructureIssues=$structureIssues;AnalysisFileCount=$analysisFiles.Count;DatabaseStructureChecked=$databaseStructureChecked;InvalidDatabasePages=$invalidDatabasePages}
 }
 
 function Export-RekordboxAudit {

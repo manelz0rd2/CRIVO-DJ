@@ -1,0 +1,126 @@
+{
+  "CatalogVersion": 1,
+  "ReviewedAt": "2026-10-15",
+  "Profiles": [
+    {
+      "Id": "cdj-2000",
+      "Name": "Pioneer DJ CDJ-2000",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF"],
+      "UncertainExtensions": ["M4A"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "CDJ-2000 — manuais e documentação oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/archive/cdj-2000/",
+      "Notes": "O teste não confirma firmware, codec interno de arquivos M4A nem reprodução completa."
+    },
+    {
+      "Id": "cdj-2000nxs2",
+      "Name": "Pioneer DJ CDJ-2000NXS2",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": [],
+      "MaximumSampleRate": 96000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "CDJ-2000NXS2 — manuais e documentação oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/archive/cdj-2000nxs2/",
+      "Notes": "ALAC e AAC podem usar M4A; a extensão sozinha não permite confirmar o codec interno."
+    },
+    {
+      "Id": "cdj-3000",
+      "Name": "Pioneer DJ CDJ-3000",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "MP4", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": [],
+      "MaximumSampleRate": 96000,
+      "LibraryMode": "Either",
+      "SourceTitle": "CDJ-3000 — manual oficial e guia USB Export",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/player/cdj-3000/",
+      "Notes": "O catálogo adota FAT32 como escolha conservadora quando a versão de firmware não é conhecida."
+    },
+    {
+      "Id": "cdj-3000x",
+      "Name": "AlphaTheta CDJ-3000X",
+      "FileSystems": ["FAT16", "FAT32", "EXFAT", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "MP4", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": [],
+      "MaximumSampleRate": 96000,
+      "LibraryMode": "OneLibrary",
+      "SourceTitle": "CDJ-3000X — manual oficial, visão geral do produto",
+      "SourceUrl": "https://downloads.support.alphatheta.com/manuals/dj-players/CDJ-3000X/html/en/000_CDJ-3000X_IM_01_EN_DRI1956-A_en/Product_overview/Product_overview.htm",
+      "Notes": "O equipamento exige OneLibrary para navegar a biblioteca exportada. NTFS não é suportado."
+    },
+    {
+      "Id": "xdj-rx3",
+      "Name": "Pioneer DJ XDJ-RX3",
+      "FileSystems": ["FAT16", "FAT32", "EXFAT", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "MP4", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": ["M4A"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "XDJ-RX3 — manual oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/all-in-one-system/xdj-rx3/",
+      "Notes": "A presença de uma extensão aceita não garante que o codec interno possa ser decodificado."
+    },
+    {
+      "Id": "xdj-az",
+      "Name": "AlphaTheta XDJ-AZ",
+      "FileSystems": ["FAT16", "FAT32", "EXFAT", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "MP4", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": [],
+      "MaximumSampleRate": 96000,
+      "LibraryMode": "OneLibrary",
+      "SourceTitle": "XDJ-AZ — manual oficial, visão geral e OneLibrary",
+      "SourceUrl": "https://downloads.support.alphatheta.com/manuals/all-in-one-dj-systems/XDJ-AZ/html/en/000COV_en/Product_overview/Product_overview.htm",
+      "Notes": "O XDJ-AZ aceita somente OneLibrary para navegar tracks e playlists no dispositivo USB. NTFS não é suportado."
+    },
+    {
+      "Id": "xdj-xz",
+      "Name": "Pioneer DJ XDJ-XZ",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": ["M4A", "FLAC", "FLA"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "XDJ-XZ — manual e histórico de firmware oficiais",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/all-in-one-system/xdj-xz/",
+      "Notes": "FLAC depende de firmware compatível. Sem identificar a versão instalada, o CRIVO apresenta esse formato como não confirmado."
+    },
+    {
+      "Id": "xdj-rx2",
+      "Name": "Pioneer DJ XDJ-RX2",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF"],
+      "UncertainExtensions": ["M4A"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "XDJ-RX2 — manual oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/xdj-rx2/",
+      "Notes": "FLAC e ALAC não entram como compatíveis neste perfil conservador. A extensão M4A sozinha não confirma o codec interno."
+    },
+    {
+      "Id": "xdj-rr",
+      "Name": "Pioneer DJ XDJ-RR",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF"],
+      "UncertainExtensions": ["M4A"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "XDJ-RR — manual oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/xdj-rr/?all=1",
+      "Notes": "FLAC e ALAC não entram como compatíveis neste perfil conservador. A extensão M4A sozinha não confirma o codec interno."
+    },
+    {
+      "Id": "xdj-1000mk2",
+      "Name": "Pioneer DJ XDJ-1000MK2",
+      "FileSystems": ["FAT16", "FAT32", "HFS+"],
+      "Extensions": ["MP3", "AAC", "M4A", "WAV", "AIF", "AIFF", "FLAC", "FLA"],
+      "UncertainExtensions": ["M4A"],
+      "MaximumSampleRate": 48000,
+      "LibraryMode": "DeviceLibrary",
+      "SourceTitle": "XDJ-1000MK2 — manual oficial",
+      "SourceUrl": "https://www.pioneerdj.com/en/support/documents/player/xdj-1000mk2/",
+      "Notes": "O perfil verifica os limites do modo USB. A extensão sozinha não garante a leitura completa do codec interno."
+    }
+  ]
+}

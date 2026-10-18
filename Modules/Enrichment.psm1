@@ -100,7 +100,7 @@ function Set-TrackSuggestion {
 
 function Write-ApprovedMetadata {
     param([Parameter(Mandatory)][object[]]$Tracks,[string]$Template='Enriquecimento online')
-    $dll=Join-Path (Get-AppRoot) 'lib\TagLibSharp.dll';if(-not('TagLib.File' -as [type])){Add-Type -Path $dll}
+    $dll=Join-Path (Get-AppRoot) 'lib\TagLibSharp.dll';[void](Import-PortableAssembly -Path $dll -TypeName 'TagLib.File')
     $items=New-Object Collections.Generic.List[object];$id=(Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'-'+[guid]::NewGuid().ToString('N').Substring(0,8)
     foreach($track in $Tracks){
         $result='Updated';$error='';$before=$null;$file=$null

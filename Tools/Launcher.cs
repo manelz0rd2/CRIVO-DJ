@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 
 [assembly: AssemblyTitle("CRIVO DJ")]
-[assembly: AssemblyDescription("CRIVO DJ por MANELZ0RD")]
+[assembly: AssemblyDescription("CRIVO DJ v0.9.9 por MANELZ0RD")]
 [assembly: AssemblyProduct("CRIVO DJ")]
 [assembly: AssemblyCompany("MANELZ0RD")]
 [assembly: AssemblyCopyright("© MANELZ0RD")]

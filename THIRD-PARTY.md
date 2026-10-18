@@ -9,5 +9,6 @@
 - **Pyrekordbox 0.4.4** — acesso transacional ao banco local do Rekordbox 6/7. Projeto: https://github.com/dylanljones/pyrekordbox — licença MIT; integração não oficial e não afiliada à AlphaTheta/Pioneer DJ.
 - **SQLCipher / sqlcipher3-wheels 0.5.7** — abertura do `master.db` criptografado, distribuído dentro do helper de integração direta; consulte as licenças incluídas pelos respectivos projetos.
 - **SQLAlchemy 2.1.3** — camada transacional usada pelo helper do Rekordbox — licença MIT.
+- **python-prodj-link / pdblib** — leitura tolerante da Device Library (`EXPORT.PDB`) usada exclusivamente para diagnóstico e recuperação em cópia. Projeto: https://github.com/flesniak/python-prodj-link — licença Apache-2.0; código e licença preservados em `Tools/UsbRecoverySrc`.
 
 O CRIVO DJ não envia o arquivo de áudio. Quando o AcoustID é usado, o `fpcalc` gera localmente uma impressão digital compacta.

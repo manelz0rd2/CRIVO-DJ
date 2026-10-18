@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 [CmdletBinding()]
 param()
 
@@ -16,14 +16,22 @@ Set-AuditMode Library
 if($AuditLibrarySourcePanel.Visibility -ne 'Visible' -or $AuditUsbSourcePanel.Visibility -ne 'Collapsed'){throw 'O modo Biblioteca não restaurou os painéis da Auditoria.'}
 $library=Get-RekordboxDatabaseLibrary -Path $database
 if(-not$library -or @($library.Tracks).Count -lt 1){throw 'A leitura de runtime não retornou a coleção do Rekordbox.'}
-$expectedMissing=@($library.Tracks|Where-Object{-not($_.Location -and (Test-Path -LiteralPath ([string]$_.Location) -PathType Leaf))}).Count
+$expectedMissing=0;$expectedUnavailable=0
+foreach($track in @($library.Tracks)){
+    $location=[string]$track.Location
+    try{$location=[Uri]::UnescapeDataString(($location -replace '^file://(localhost/)?',''));if($location -match '^/[A-Za-z]:/'){$location=$location.Substring(1)};$location=$location -replace '/','\'}catch{}
+    if(-not$location){$expectedMissing++;continue}
+    $root=[IO.Path]::GetPathRoot($location)
+    if($root -and -not(Test-Path -LiteralPath $root -PathType Container)){$expectedUnavailable++;continue}
+    if(-not(Test-Path -LiteralPath $location -PathType Leaf)){$expectedMissing++}
+}
 try{$directAudit=Get-RekordboxAudit -Library $library -Settings $script:Settings}catch{throw "$($_.Exception.Message)`n$($_.ScriptStackTrace)"}
 if(-not$directAudit -or @($directAudit.Rows).Count -ne @($library.Tracks).Count){throw 'A auditoria direta não retornou uma linha para cada track da coleção.'}
 $RekordboxXmlText.Text=$database
 Invoke-RekordboxIntegrationAudit
 if(-not$script:RekordboxAudit -or [int]$AuditCollectionCount.Text -ne @($library.Tracks).Count){throw 'O botão ESCANEAR BIBLIOTECA não atualizou os indicadores da Auditoria.'}
 if([int]$script:RekordboxAudit.MissingFiles -ne $expectedMissing){throw "A auditoria marcou $($script:RekordboxAudit.MissingFiles) arquivo(s) físico(s) ausente(s), mas a verificação direta encontrou $expectedMissing."}
-if([int]$script:RekordboxAudit.UnavailableFiles -lt 0){throw 'O contador de unidades indisponíveis ficou inválido.'}
+if([int]$script:RekordboxAudit.UnavailableFiles -ne $expectedUnavailable){throw "A auditoria marcou $($script:RekordboxAudit.UnavailableFiles) arquivo(s) em unidades indisponíveis, mas a verificação direta encontrou $expectedUnavailable."}
 Select-ComboTag $AuditFilterCombo 'All';Update-RekordboxAuditView
 if(@($RekordboxAuditGrid.ItemsSource).Count -ne @($library.Tracks).Count){throw 'A lista da Auditoria não recebeu todas as tracks.'}
 if($null -eq $AuditQualityCount.Text -or $null -eq $AuditDataCount.Text){throw 'Os novos indicadores da Auditoria não foram atualizados.'}

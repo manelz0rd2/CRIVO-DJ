@@ -35,7 +35,7 @@ function Undo-Operation {
     param([Parameter(Mandatory)]$Operation)
     $results = [System.Collections.Generic.List[object]]::new()
     if ($Operation.Action -eq 'Metadata') {
-        $dll=Join-Path (Get-AppRoot) 'lib\TagLibSharp.dll';if(-not('TagLib.File' -as [type])){Add-Type -Path $dll}
+        $dll=Join-Path (Get-AppRoot) 'lib\TagLibSharp.dll';[void](Import-PortableAssembly -Path $dll -TypeName 'TagLib.File')
         foreach($item in ($Operation.Items|ForEach-Object{$_}|Sort-Object Index -Descending)){
             $file=$null
             try{
