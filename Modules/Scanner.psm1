@@ -43,7 +43,7 @@ function Get-AudioFiles {
                         if ($alias) { $meta.Genre = [string]$alias.Value; break }
                         if ($canonical) { $meta.Genre = [string]$canonical.Value; break }
                     }
-                } elseif ($fallback -eq '_PENDENTE') { $meta.Genre = '_PENDENTE'; break }
+                } elseif ($fallback -in @('MissingGenre','_PENDENTE')) { $meta.Genre = 'Gênero faltante'; break }
             }
         }
         $hash = ''
@@ -52,6 +52,13 @@ function Get-AudioFiles {
         if ($meta.IsCorrupt) { $qualityIssues.Add('Corrompido/inacessível') }
         if ($file.Extension -eq '.mp3' -and $meta.Bitrate -gt 0 -and $meta.Bitrate -lt [int]$Settings.Quality.MinimumMp3Bitrate) { $qualityIssues.Add("Bitrate baixo: $($meta.Bitrate) kbps") }
         if ($meta.SampleRate -gt 0 -and $meta.SampleRate -lt [int]$Settings.Quality.MinimumSampleRate) { $qualityIssues.Add("Sample rate baixo: $($meta.SampleRate) Hz") }
+        $missingFields = [System.Collections.Generic.List[string]]::new()
+        if (-not $meta.HasTitleMetadata) { $missingFields.Add('Título faltante') }
+        if ([string]::IsNullOrWhiteSpace([string]$meta.Artist)) { $missingFields.Add('Artista faltante') }
+        if ([string]::IsNullOrWhiteSpace([string]$meta.Album)) { $missingFields.Add('Álbum faltante') }
+        if ($genreWasMissing) { $missingFields.Add('Gênero faltante') }
+        if ([string]::IsNullOrWhiteSpace([string]$meta.Year)) { $missingFields.Add('Ano faltante') }
+        $metadataStatus = if ($missingFields.Count) { $missingFields -join ' • ' } else { 'Dados completos' }
         $result.Add([pscustomobject]@{
             Selected = $true; Name = $file.Name; OutputName = $file.Name; FullName = $file.FullName; Directory = $file.DirectoryName
             Extension = $file.Extension; Size = $file.Length; Created = $file.CreationTime; Modified = $file.LastWriteTime
@@ -59,7 +66,7 @@ function Get-AudioFiles {
             Bpm = $(if([int]$meta.Bpm -gt 0){[int]$meta.Bpm}else{''}); Key = $meta.Key; Bitrate = $meta.Bitrate; SampleRate = $meta.SampleRate; BitDepth = $meta.BitDepth; Codec = $meta.Codec
             Duration = $meta.Duration; ISRC = ''; MetadataError = $meta.MetadataError
             BitrateMin = $meta.BitrateMin; BitrateMax = $meta.BitrateMax; BitrateAverage = $meta.BitrateAverage; BitrateMode = $meta.BitrateMode; BitrateMap = $meta.BitrateMap; BitrateFrames = $meta.BitrateFrames
-            MissingTitle = (-not $meta.HasTitleMetadata); MissingGenre = $genreWasMissing; IsCorrupt = $meta.IsCorrupt; QualityStatus = $(if($qualityIssues.Count){$qualityIssues -join '; '}else{'OK'})
+            MissingTitle = (-not $meta.HasTitleMetadata); MissingGenre = $genreWasMissing; MetadataStatus = $metadataStatus; IsCorrupt = $meta.IsCorrupt; QualityStatus = $(if($qualityIssues.Count){$qualityIssues -join '; '}else{'OK'})
             Hash = $hash; Status = 'Analisado'; Destination = ''; Rule = ''; Error = $meta.MetadataError
         })
     }

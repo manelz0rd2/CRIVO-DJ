@@ -42,7 +42,7 @@ function Resolve-FolderTemplate {
     }
     $genre = ConvertTo-SafePathPart $genreValue ([string]$Settings.UnknownValues.Genre)
     $artist = ConvertTo-SafePathPart $Track.Artist ([string]$Settings.UnknownValues.Artist)
-    $album = ConvertTo-SafePathPart $Track.Album '_SEM ALBUM'
+    $album = ConvertTo-SafePathPart $Track.Album 'Álbum faltante'
     $key = ConvertTo-SafePathPart $Track.Key ([string]$Settings.UnknownValues.Key)
     $parent = ConvertTo-SafePathPart (Split-Path $Track.Directory -Leaf) '_RAIZ'
     $rootFolder = if ($Track.PSObject.Properties['SourceRootFolder']) { ConvertTo-SafePathPart ([string]$Track.SourceRootFolder) '_RAIZ' } else { $parent }
@@ -60,11 +60,11 @@ function Resolve-FolderTemplate {
         '{KEY}' = $key; '{EXTENSAO}' = $Track.Extension.TrimStart('.').ToUpperInvariant(); '{FORMATO}' = $Track.Extension.TrimStart('.').ToUpperInvariant()
         '{PASTA_ORIGEM}' = $parent; '{PASTA_PAI}' = $parent; '{PASTA_RAIZ}' = $rootFolder
         '{NOME_ARQUIVO}' = ConvertTo-SafePathPart $Track.Title $Track.Name; '{TITULO}' = ConvertTo-SafePathPart $Track.Title $Track.Name
-        '{BITRATE}' = $(if ($Track.Bitrate) { [string]$Track.Bitrate } else { '_SEM BITRATE' }); '{SAMPLE_RATE}' = $(if ($Track.SampleRate) { [string]$Track.SampleRate } else { '_SEM SAMPLE RATE' })
+        '{BITRATE}' = $(if ($Track.Bitrate) { [string]$Track.Bitrate } else { 'Bitrate não identificado' }); '{SAMPLE_RATE}' = $(if ($Track.SampleRate) { [string]$Track.SampleRate } else { 'Sample rate não identificado' })
     }
     $resolved = $Template
     foreach ($token in $tokens.Keys) { $resolved = $resolved.Replace($token, [string]$tokens[$token]) }
-    if ($resolved -match '\{[^{}]+\}') { throw "Variável de pasta desconhecida: $($Matches[0])" }
+    if ($resolved -match '\{[^{}]+\}') { throw "Opção de nome desconhecida: $($Matches[0])" }
     $rootBecauseMissing = $MissingMetadataPolicy -eq 'Root' -and (
         (($Template -match '\{GENERO\}') -and $isMissingGenre) -or
         (($Template -match '\{(BPM|BPM_RANGE)\}') -and -not $Track.Bpm) -or
@@ -75,7 +75,7 @@ function Resolve-FolderTemplate {
     if ($rootBecauseMissing) { return '' }
     $parts = $resolved -split '[\\/]' | Where-Object { $_ }
     if ($MissingMetadataPolicy -eq 'Root') {
-        $parts = @($parts | Where-Object { $_ -notmatch '^_(SEM|PENDENTE)' })
+        $parts = @($parts | Where-Object { $_ -notmatch '(?i)(faltante|não analisad|não identificad|^_(SEM|PENDENTE))' })
     }
     return (($parts | ForEach-Object { ConvertTo-SafePathPart $_ }) -join [IO.Path]::DirectorySeparatorChar)
 }

@@ -144,7 +144,7 @@ function Start-ODTDownload {
     $process=Start-Process -FilePath $EnginePath -ArgumentList ($arguments -join ' ') -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $hostName=try{([Uri]$Url).Host}catch{'Busca externa'};$format=if($Quality -eq 'Original'){'Audio original'}else{"MP3 ${Quality} kbps"}
     $title=if($InitialTitle){$InitialTitle}else{'Lendo dados da faixa...'};$source=if($Provider){$Provider}elseif($InitialSource){$InitialSource}else{$hostName};$shownUrl=if($DisplayUrl){$DisplayUrl}else{$Url}
-    return [pscustomobject]@{Kind='Download';Id=$id;IsSelected=$true;Title=$title;Source=$source;Duration=$InitialDuration;Thumbnail=$InitialThumbnail;Url=$shownUrl;DownloadUrl=$Url;LockMetadata=[bool]$InitialTitle;Quality=$format;QualityCode=$Quality;Status='Baixando';Progress='0%';ProgressValue=0;Detail='Conectando...';Process=$process;StdOutPath=$stdout;StdErrPath=$stderr;StartedAt=Get-Date;FinishedAt=$null;OutputFolder=$pending;FinalPath=''}
+    return [pscustomobject]@{Kind='Download';Id=$id;IsSelected=$true;Title=$title;Artist=$InitialSource;Provider=$Provider;Source=$source;Duration=$InitialDuration;Thumbnail=$InitialThumbnail;Url=$shownUrl;DownloadUrl=$Url;LockMetadata=[bool]$InitialTitle;Quality=$format;QualityCode=$Quality;Status='Baixando';Progress='0%';ProgressValue=0;Detail='Conectando...';Process=$process;EnginePath=$EnginePath;FFmpegPath=$FFmpegPath;StdOutPath=$stdout;StdErrPath=$stderr;StartedAt=Get-Date;FinishedAt=$null;OutputFolder=$pending;FinalPath='';FallbackAttempted=([string]$Url -match '^ytsearch\d*:');OriginalFailure=''}
 }
 
 function Start-ODTSpotifyResolver {
@@ -240,6 +240,7 @@ function Complete-ODTPlaylistResolver {
         if(-not$artist -and -not$isSoundCloud){$artist=$parentArtist}
         if(-not$thumbnail -and -not$isSoundCloud){$thumbnail=$parentThumbnail}
         if(-not$title){try{$leaf=[Uri]::UnescapeDataString(([Uri]$trackUrl).Segments[-1]).Trim('/');$title=($leaf -replace '[-_]+',' ' -replace '\s+',' ').Trim()}catch{$title=''}}
+        if($artist -and $title){$artistPrefix='^\s*'+[regex]::Escape($artist)+'\s*[-–—:]\s*';$title=($title -replace $artistPrefix,'').Trim()}
         if(-not$title){$title="Track $index"};$items.Add([pscustomobject]@{Kind='TrackRequest';IsSelected=$true;Title=$title;Artist=$artist;Source=$Resolver.Source;Duration=$duration;Thumbnail=$thumbnail;Url=$trackUrl;DownloadUrl=$trackUrl;Quality=$Resolver.Quality;QualityCode=$Resolver.QualityCode;Status='Pronto';Progress='';ProgressValue=0;Detail='Marque e clique em Iniciar download';Process=$null;OutputFolder=$Resolver.OutputFolder})
     }
     if(-not$items.Count){$Resolver.Status='Falhou';$Resolver.Progress='';$Resolver.ProgressValue=0;$Resolver.Detail='Nenhuma track utilizável foi encontrada nesse link.';return @()}
@@ -288,6 +289,7 @@ function Get-ODTDownloadProgress {
     $matches=[regex]::Matches($text,'\[download\]\s+(\d{1,3}(?:\.\d+)?)%');$progressValue=if($matches.Count){[Math]::Min(100,[int][Math]::Round([double]$matches[$matches.Count-1].Groups[1].Value))}else{[int]$Download.ProgressValue};$progress="$progressValue%"
     $lines=@($text -split '[\r\n]+'|Where-Object{$_ -match '^\[download\]'});if($lines.Count){$Download.Detail=$lines[$lines.Count-1]}
     $Download.Process.Refresh();if($Download.Process.HasExited){
+        try{$Download.Process.WaitForExit()}catch{};$Download.Process.Refresh()
         $Download.FinishedAt=Get-Date
         $exitCode=[int]$Download.Process.ExitCode
         $existing=$null;if($Download.PSObject.Properties['FinalPath'] -and $Download.FinalPath -and (Test-Path -LiteralPath $Download.FinalPath -PathType Leaf)){$existing=Get-Item -LiteralPath $Download.FinalPath}else{$existing=Find-DownloadedTrackFile -Download $Download}
@@ -296,7 +298,30 @@ function Get-ODTDownloadProgress {
             if($Download.PSObject.Properties['FinalPath']){$Download.FinalPath=$existing.FullName}else{$Download|Add-Member NoteProperty FinalPath $existing.FullName}
             $Download.Detail=if($exitCode -ne 0 -and $existing){'A faixa ja existia no destino'}else{'Pronto para organizar'}
         }else{
-            $Download.Status='Falhou';$failure=Get-DownloadFailureDetail -Text $text -ExitCode $exitCode;$Download.Detail=if($exitCode -eq 0 -and $failure -notmatch '(?i)error|failed|unable|erro|falhou'){'O downloader terminou, mas o arquivo final não foi encontrado.'}else{$failure}
+            $failure=Get-DownloadFailureDetail -Text $text -ExitCode $exitCode
+            $fallbackAttempted=[bool](Get-ODTObjectProperty $Download 'FallbackAttempted' $false)
+            $engine=[string](Get-ODTObjectProperty $Download 'EnginePath' '')
+            $canRetry=(-not$fallbackAttempted) -and $engine -and (Test-Path -LiteralPath $engine -PathType Leaf) -and ([string]$Download.DownloadUrl -match '^https?://')
+            if($canRetry){
+                $fallbackTitle=[string]$Download.Title
+                if(-not$fallbackTitle -or $fallbackTitle -eq 'Lendo dados da faixa...'){
+                    try{$fallbackTitle=([Uri]::UnescapeDataString(([Uri][string]$Download.DownloadUrl).Segments[-1]).Trim('/') -replace '[-_]+',' ' -replace '\s+',' ').Trim()}catch{$fallbackTitle=''}
+                }
+                $artist=[string](Get-ODTObjectProperty $Download 'Artist' '')
+                $query=("$artist $fallbackTitle audio" -replace '\s+',' ').Trim()
+                if($query -and $query -ne 'audio'){
+                    $provider=[string](Get-ODTObjectProperty $Download 'Provider' '')
+                    $ffmpeg=[string](Get-ODTObjectProperty $Download 'FFmpegPath' '')
+                    $retry=Start-ODTDownload -Url ("ytsearch1:$query") -DisplayUrl ([string]$Download.Url) -InitialTitle $fallbackTitle -InitialSource $artist -Provider $provider -InitialDuration ([string]$Download.Duration) -InitialThumbnail ([string]$Download.Thumbnail) -OutputRoot ([string]$Download.OutputFolder) -EnginePath $engine -FFmpegPath $ffmpeg -Quality ([string]$Download.QualityCode)
+                    foreach($name in @('Process','StdOutPath','StdErrPath','StartedAt','FinishedAt','DownloadUrl','FinalPath','Progress','ProgressValue')){$Download.$name=$retry.$name}
+                    $Download.FallbackAttempted=$true;$Download.OriginalFailure=$failure;$Download.Status='Baixando';$Download.Detail='Fonte original indisponível; buscando uma alternativa pelo artista e título'
+                    return $Download
+                }
+            }
+            $Download.Status='Falhou'
+            $originalFailure=[string](Get-ODTObjectProperty $Download 'OriginalFailure' '')
+            if($fallbackAttempted -and $originalFailure){$Download.Detail="A fonte original não disponibilizou o áudio e a busca alternativa por artista e título também não encontrou uma versão compatível. Detalhe da fonte: $originalFailure"}
+            else{$Download.Detail=if($exitCode -eq 0 -and $failure -notmatch '(?i)error|failed|unable|erro|falhou'){'O downloader terminou, mas o arquivo final não foi encontrado.'}else{$failure}}
         }
     }
     $Download.Progress=$progress;$Download.ProgressValue=$progressValue;return $Download

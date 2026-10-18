@@ -25,7 +25,7 @@ function Write-JsonFile {
 }
 
 function ConvertTo-SafePathPart {
-    param([AllowNull()][string]$Value, [string]$Fallback = '_PENDENTE')
+    param([AllowNull()][string]$Value, [string]$Fallback = 'Dado faltante')
     if ([string]::IsNullOrWhiteSpace($Value)) { return $Fallback }
     $result = $Value.Trim() -replace '[<>:"/\\|?*]', '-'
     $result = $result -replace '\s+', ' '

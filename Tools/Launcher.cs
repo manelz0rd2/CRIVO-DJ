@@ -8,8 +8,8 @@ using System.Reflection;
 [assembly: AssemblyProduct("CRIVO DJ")]
 [assembly: AssemblyCompany("MANELZ0RD")]
 [assembly: AssemblyCopyright("© MANELZ0RD")]
-[assembly: AssemblyVersion("0.9.0.1")]
-[assembly: AssemblyFileVersion("0.9.0.1")]
+[assembly: AssemblyVersion("0.9.9.0")]
+[assembly: AssemblyFileVersion("0.9.9.0")]
 
 internal static class Launcher
 {

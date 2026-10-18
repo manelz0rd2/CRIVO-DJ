@@ -17,6 +17,8 @@ if($AuditLibrarySourcePanel.Visibility -ne 'Visible' -or $AuditUsbSourcePanel.Vi
 $library=Get-RekordboxDatabaseLibrary -Path $database
 if(-not$library -or @($library.Tracks).Count -lt 1){throw 'A leitura de runtime não retornou a coleção do Rekordbox.'}
 $expectedMissing=@($library.Tracks|Where-Object{-not($_.Location -and (Test-Path -LiteralPath ([string]$_.Location) -PathType Leaf))}).Count
+try{$directAudit=Get-RekordboxAudit -Library $library -Settings $script:Settings}catch{throw "$($_.Exception.Message)`n$($_.ScriptStackTrace)"}
+if(-not$directAudit -or @($directAudit.Rows).Count -ne @($library.Tracks).Count){throw 'A auditoria direta não retornou uma linha para cada track da coleção.'}
 $RekordboxXmlText.Text=$database
 Invoke-RekordboxIntegrationAudit
 if(-not$script:RekordboxAudit -or [int]$AuditCollectionCount.Text -ne @($library.Tracks).Count){throw 'O botão ESCANEAR BIBLIOTECA não atualizou os indicadores da Auditoria.'}

@@ -142,7 +142,7 @@ foreach ($module in @('Common','Metadata','Scanner','Duplicates','History','Orga
 }
 Import-Module (Join-Path $AppRoot 'Modules\Common.psm1') -Force
 
-$script:AppVersion = '0.9.0-beta.1'
+$script:AppVersion = '0.9.9'
 $DefaultSettingsPath = Join-Path $AppRoot 'Config\settings.json'
 $SettingsPath = Join-Path (Get-AppDataRoot) 'Config\settings.json'
 if(-not(Test-Path -LiteralPath $SettingsPath -PathType Leaf)){
@@ -151,6 +151,9 @@ if(-not(Test-Path -LiteralPath $SettingsPath -PathType Leaf)){
 }
 $script:Settings = Read-JsonFile -Path $SettingsPath
 if(-not$script:Settings){throw "A configuração do CRIVO DJ está ausente ou inválida: $SettingsPath"}
+if($script:Settings.PSObject.Properties['UnknownValues']){$script:Settings.UnknownValues.Genre='Gênero faltante'}
+if($script:Settings.PSObject.Properties['GenreFallbackPriority']){$script:Settings.GenreFallbackPriority=@($script:Settings.GenreFallbackPriority|ForEach-Object{if($_ -eq '_PENDENTE'){'MissingGenre'}else{$_}})}
+Write-JsonFile -Path $SettingsPath -Value $script:Settings
 $script:Tracks = @()
 $script:Plan = $null
 $script:DuplicatePaths = @{}
@@ -165,6 +168,7 @@ $script:AuditTracks = @()
 $script:DownloadQueue = New-Object Collections.ObjectModel.ObservableCollection[object]
 $script:DownloadFolderTrackCount = 0
 $script:DownloadStartRequested = $false
+$script:CustomPlaylistName = 'CRIVO DJ — Organizado'
 
 [xml]$xaml = Get-Content -LiteralPath (Join-Path $AppRoot 'UI\MainWindow.xaml') -Raw -Encoding UTF8
 $reader = New-Object System.Xml.XmlNodeReader $xaml
@@ -186,14 +190,14 @@ $controlNames = @(
     'TitleBar','MinimizeButton','CloseButton','MainTabs',
     'SourceText','ChooseFolderButton','OrganizerOptionsScroll','ConfigPanel','ModeDate','ModeGenre','ModeDateGenre','ModeGenreBpm',
     'DestinationSame','DestinationOther',
-    'FolderPatternText','CustomizeFolderCheck','RenameFilesCheck','DetectDuplicatesCheck','OnlyAudioCheck','CreateReportCheck','CreateRestoreCheck',
-    'DestinationText','ChooseDestinationButton','ActionCombo','ConflictCombo','DateSourceCombo','DuplicateLevelCombo','MissingPolicyCombo','WatchFolderCheck','SendRekordboxCheck','OrganizerPlaylistNameText','RekordboxExeText','ChooseRekordboxExeButton',
+    'FolderPatternText','CustomizeFolderCheck','TemplateVariablesButton','RenameFilesCheck','DetectDuplicatesCheck','OnlyAudioCheck','CreateReportCheck','CreateRestoreCheck',
+    'DestinationText','ChooseDestinationButton','ActionCombo','ConflictCombo','DateSourceCombo','DuplicateLevelCombo','MissingPolicyCombo','WatchFolderCheck','SendRekordboxCheck','PlaylistNameFromFolderRadio','PlaylistNameCustomRadio','OrganizerPlaylistNameText','RekordboxExeText','ChooseRekordboxExeButton',
     'RulesButton','DryRunButton','FavoritesButton','DashboardButton2','ExportConfigButton','ImportConfigButton','EnrichMetadataButton','InboxButton','ImportInboxButton','DownloadStatusText','ImportRekordboxButton','ExportRekordboxButton','SystemCheckButton','ExportDiagnosticButton','EnvironmentStatusText',
     'DownloadDropPanel','DownloadUrlText','AddDownloadLinkButton','DownloadDestinationText','ChooseDownloadDestinationButton','StartDownloadButton','RemoveDownloadButton','ClearDownloadsButton','DownloadQueueGrid',
     'RekordboxXmlText','ChooseRekordboxXmlButton','AuditRekordboxButton','RekordboxSummaryText','RekordboxAuditGrid','ExportRekordboxAuditButton','EditAuditMetadataButton','ReviewAuditButton',
     'AuditLibraryModeButton','AuditUsbModeButton','AuditLibrarySourcePanel','AuditUsbSourcePanel','AuditUsbPathText','ChooseAuditUsbButton','AuditUsbButton','AuditReadOnlyText',
     'AuditCollectionCount','AuditMissingCount','AuditQualityCount','AuditDataCount','AuditDuplicateCount','AuditTotalLabel','AuditMissingLabel','AuditQualityLabel','AuditDataLabel','AuditDuplicateLabel','AuditSearchText','AuditFilterCombo',
-    'TotalCount','ReadyCount','NoGenreCount','DuplicateCount','GenreCounter1','GenreCounter2','GenreCounter3','GenreLabel1','GenreLabel2','GenreLabel3','SearchText','MetadataMissingCheck','PreviewGrid','PlanSummary','Progress','EditTrackMetadataButton',
+    'TotalCount','ReadyCount','NoGenreCount','DuplicateCount','GenreCounter1','GenreCounter2','GenreCounter3','GenreLabel1','GenreLabel2','GenreLabel3','SearchText','OrganizerListFilterCombo','PreviewGrid','PlanSummary','Progress','EditTrackMetadataButton',
     'ApplyButton','UndoButton','OpenHistoryButton','StatusText'
 )
 foreach ($name in $controlNames) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
@@ -211,9 +215,57 @@ function Set-AbletonWindowsTheme {
 }
 Set-AbletonWindowsTheme -Root $window
 
+function Show-CrivoDialog {
+    param(
+        [string]$Message,
+        [string]$Title = 'CRIVO DJ',
+        [string]$PrimaryText = 'OK',
+        [string]$SecondaryText = '',
+        [switch]$Question
+    )
+    $dialog=New-Object Windows.Window
+    $dialog.Title="CRIVO DJ — $Title";$dialog.Width=520;$dialog.SizeToContent='Height';$dialog.MaxHeight=720
+    $dialog.WindowStartupLocation='CenterOwner';$dialog.ResizeMode='NoResize';$dialog.WindowStyle='None';$dialog.ShowInTaskbar=$false
+    $dialog.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#B4B0A8')
+    $dialog.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613')
+    $dialog.FontFamily='Segoe UI';if($window -and $window.IsLoaded){$dialog.Owner=$window}
+    if($window.Icon){$dialog.Icon=$window.Icon}
+    $shell=New-Object Windows.Controls.Border;$shell.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$shell.BorderThickness='1';$shell.Padding='0'
+    $layout=New-Object Windows.Controls.Grid
+    foreach($height in @('Auto','Auto','Auto')){$row=New-Object Windows.Controls.RowDefinition;$row.Height=[Windows.GridLength]::Auto;$layout.RowDefinitions.Add($row)}
+    $header=New-Object Windows.Controls.Border;$header.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$header.Padding='16,12'
+    $headerText=New-Object Windows.Controls.TextBlock;$headerText.Text=$Title.ToUpperInvariant();$headerText.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$headerText.FontWeight='Bold';$headerText.FontSize=13;$header.Child=$headerText
+    [Windows.Controls.Grid]::SetRow($header,0);$layout.Children.Add($header)|Out-Null
+    $content=New-Object Windows.Controls.Border;$content.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#E1DED6');$content.Padding='18,18,18,16'
+    $messageText=New-Object Windows.Controls.TextBlock;$messageText.Text=$Message;$messageText.TextWrapping='Wrap';$messageText.FontSize=13;$messageText.LineHeight=20;$messageText.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$content.Child=$messageText
+    [Windows.Controls.Grid]::SetRow($content,1);$layout.Children.Add($content)|Out-Null
+    $footer=New-Object Windows.Controls.StackPanel;$footer.Orientation='Horizontal';$footer.HorizontalAlignment='Right';$footer.Margin='12,10,12,12'
+    if($SecondaryText){$secondary=New-Object Windows.Controls.Button;$secondary.Content=$SecondaryText;$secondary.MinWidth=112;$secondary.Height=36;$secondary.Margin='0,0,8,0';$secondary.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#C5C1B8');$secondary.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$secondary.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#6F6A62');$secondary.Add_Click({$dialog.DialogResult=$false;$dialog.Close()});$footer.Children.Add($secondary)|Out-Null}
+    $primary=New-Object Windows.Controls.Button;$primary.Content=$PrimaryText;$primary.MinWidth=112;$primary.Height=36;$primary.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$primary.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$primary.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#24221F');$primary.FontWeight='Bold';$primary.Add_Click({$dialog.DialogResult=$true;$dialog.Close()});$footer.Children.Add($primary)|Out-Null
+    [Windows.Controls.Grid]::SetRow($footer,2);$layout.Children.Add($footer)|Out-Null
+    $shell.Child=$layout;$dialog.Content=$shell
+    $result=$dialog.ShowDialog()
+    return [bool]$result
+}
+
 function Show-Message {
     param([string]$Message, [string]$Title = 'CRIVO DJ', [Windows.MessageBoxImage]$Icon = [Windows.MessageBoxImage]::Information)
-    [Windows.MessageBox]::Show($window, $Message, $Title, [Windows.MessageBoxButton]::OK, $Icon) | Out-Null
+    [void](Show-CrivoDialog -Message $Message -Title $Title)
+}
+
+function Show-CrivoConfirm {
+    param([string]$Message,[string]$Title='Confirmar',[string]$ConfirmText='CONFIRMAR',[string]$CancelText='CANCELAR')
+    return (Show-CrivoDialog -Message $Message -Title $Title -PrimaryText $ConfirmText -SecondaryText $CancelText -Question)
+}
+
+function Set-CrivoFormStyle {
+    param([Parameter(Mandatory)][Windows.Forms.Form]$Form,[string]$Title='CRIVO DJ')
+    $existing=@($Form.Controls);$Form.Controls.Clear();$Form.FormBorderStyle='None';$Form.Padding=New-Object Windows.Forms.Padding(1);$Form.BackColor=[Drawing.Color]::FromArgb(23,22,19)
+    $body=New-Object Windows.Forms.Panel;$body.Dock='Fill';$body.BackColor=[Drawing.Color]::FromArgb(202,198,189);foreach($control in $existing){$body.Controls.Add($control)}
+    $header=New-Object Windows.Forms.Panel;$header.Dock='Top';$header.Height=38;$header.BackColor=[Drawing.Color]::FromArgb(23,22,19)
+    $label=New-Object Windows.Forms.Label;$label.Dock='Fill';$label.Padding=New-Object Windows.Forms.Padding(13,10,0,0);$label.Text=$Title.ToUpperInvariant();$label.Font=New-Object Drawing.Font('Arial',9,[Drawing.FontStyle]::Bold);$label.ForeColor=[Drawing.Color]::FromArgb(242,240,234);$header.Controls.Add($label)
+    $close=New-Object Windows.Forms.Button;$close.Dock='Right';$close.Width=42;$close.FlatStyle='Flat';$close.FlatAppearance.BorderSize=0;$close.Text='×';$close.Font=New-Object Drawing.Font('Arial',13,[Drawing.FontStyle]::Bold);$close.BackColor=[Drawing.Color]::FromArgb(23,22,19);$close.ForeColor=[Drawing.Color]::FromArgb(242,240,234);$close.Tag=$Form;$close.Add_Click({param($sender)$target=[Windows.Forms.Form]$sender.Tag;$target.DialogResult=[Windows.Forms.DialogResult]::Cancel;$target.Close()});$header.Controls.Add($close);$close.BringToFront()
+    $Form.Controls.Add($body);$Form.Controls.Add($header);$header.BringToFront()
 }
 
 function Pump-Ui { [Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background) }
@@ -261,15 +313,62 @@ function Get-DefaultOrganizerPlaylistName {
     return 'CRIVO DJ — '+(ConvertTo-SafePathPart $folderName 'Organizado')
 }
 
+function Get-AutomaticOrganizerPlaylistName {
+    if($script:Plan -and $script:Plan.Items){
+        $folderNames=@($script:Plan.Items|Where-Object{$_.Status -eq 'Ready' -and $_.Destination}|ForEach-Object{try{Split-Path (Split-Path ([string]$_.Destination) -Parent) -Leaf}catch{}}|Where-Object{$_}|Select-Object -Unique)
+        if($folderNames.Count -eq 1){return [string]$folderNames[0]}
+    }
+    if($script:DestinationChosen -and (Test-Path -LiteralPath (Split-Path $DestinationText.Text -Parent) -PathType Container)){
+        try{$name=Split-Path ([IO.Path]::GetFullPath($DestinationText.Text).TrimEnd('\')) -Leaf;if($name){return $name}}catch{}
+    }
+    return Get-DefaultOrganizerPlaylistName -Path $SourceText.Text
+}
+
+function Sync-OrganizerPlaylistName {
+    $enabled=[bool]$SendRekordboxCheck.IsChecked
+    $PlaylistNameFromFolderRadio.IsEnabled=$enabled;$PlaylistNameCustomRadio.IsEnabled=$enabled
+    if(-not$enabled){$OrganizerPlaylistNameText.IsEnabled=$false;return}
+    if($PlaylistNameCustomRadio.IsChecked){
+        $OrganizerPlaylistNameText.IsEnabled=$true;$OrganizerPlaylistNameText.IsReadOnly=$false
+        if([string]::IsNullOrWhiteSpace($OrganizerPlaylistNameText.Text) -or $OrganizerPlaylistNameText.Text -eq (Get-AutomaticOrganizerPlaylistName)){$OrganizerPlaylistNameText.Text=$script:CustomPlaylistName}
+    }else{
+        $OrganizerPlaylistNameText.Text=Get-AutomaticOrganizerPlaylistName
+        $OrganizerPlaylistNameText.IsReadOnly=$true;$OrganizerPlaylistNameText.IsEnabled=$true
+    }
+}
+
 function Get-CurrentTemplate { return $FolderPatternText.Text.Trim() }
 
 function Sync-FolderPattern {
     $FolderPatternText.IsReadOnly = -not [bool]$CustomizeFolderCheck.IsChecked
+    $TemplateVariablesButton.IsEnabled = [bool]$CustomizeFolderCheck.IsChecked
     if (-not $CustomizeFolderCheck.IsChecked) { $FolderPatternText.Text = Get-DefaultTemplate }
+}
+
+function Show-TemplateVariablesDialog {
+    $variables=@(
+        [pscustomobject]@{Token='{AAAA}';Description='Ano com quatro dígitos'},[pscustomobject]@{Token='{AA}';Description='Ano com dois dígitos'},
+        [pscustomobject]@{Token='{MES}';Description='Nome do mês'},[pscustomobject]@{Token='{MES_NUM}';Description='Número do mês'},[pscustomobject]@{Token='{DIA}';Description='Dia'},
+        [pscustomobject]@{Token='{GENERO}';Description='Gênero'},[pscustomobject]@{Token='{ARTISTA}';Description='Artista'},[pscustomobject]@{Token='{ALBUM}';Description='Álbum'},[pscustomobject]@{Token='{ANO}';Description='Ano informado na track'},
+        [pscustomobject]@{Token='{BPM}';Description='BPM, quando já estiver disponível'},[pscustomobject]@{Token='{BPM_RANGE}';Description='Faixa de BPM, quando disponível'},[pscustomobject]@{Token='{KEY}';Description='Tonalidade, quando disponível'},
+        [pscustomobject]@{Token='{EXTENSAO}';Description='Extensão do arquivo'},[pscustomobject]@{Token='{FORMATO}';Description='Formato do áudio'},[pscustomobject]@{Token='{PASTA_ORIGEM}';Description='Pasta de origem'},
+        [pscustomobject]@{Token='{PASTA_PAI}';Description='Pasta pai'},[pscustomobject]@{Token='{PASTA_RAIZ}';Description='Pasta raiz'},[pscustomobject]@{Token='{NOME_ARQUIVO}';Description='Nome atual do arquivo'},
+        [pscustomobject]@{Token='{TITULO}';Description='Título da track'},[pscustomobject]@{Token='{BITRATE}';Description='Bitrate'},[pscustomobject]@{Token='{SAMPLE_RATE}';Description='Sample rate'}
+    )
+    $dialog=New-Object Windows.Window;$dialog.Title='CRIVO DJ — Opções do nome';$dialog.Width=600;$dialog.Height=560;$dialog.WindowStartupLocation='CenterOwner';if($window -and $window.IsLoaded){$dialog.Owner=$window};$dialog.ResizeMode='NoResize';$dialog.WindowStyle='None';$dialog.ShowInTaskbar=$false;$dialog.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#B4B0A8');$dialog.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');if($window.Icon){$dialog.Icon=$window.Icon}
+    $layout=New-Object Windows.Controls.Grid;foreach($height in @('Auto','Auto','*','Auto')){$row=New-Object Windows.Controls.RowDefinition;$row.Height=$height;$layout.RowDefinitions.Add($row)}
+    $header=New-Object Windows.Controls.Border;$header.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$header.Padding='16,12';$title=New-Object Windows.Controls.TextBlock;$title.Text='OPÇÕES PARA MONTAR O NOME';$title.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$title.FontWeight='Bold';$header.Child=$title;$header.Add_MouseLeftButtonDown({try{$dialog.DragMove()}catch{}});$layout.Children.Add($header)|Out-Null
+    $intro=New-Object Windows.Controls.TextBlock;$intro.Text='Combine texto livre com informações da track ou da pasta. Escolha uma opção abaixo para inseri-la na posição atual do nome.';$intro.TextWrapping='Wrap';$intro.Margin='16,14,16,12';[Windows.Controls.Grid]::SetRow($intro,1);$layout.Children.Add($intro)|Out-Null
+    $list=New-Object Windows.Controls.ListBox;$list.Margin='16,0,16,12';$list.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#E1DED6');$list.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#777269');$list.DisplayMemberPath='Display';foreach($item in $variables){$item|Add-Member NoteProperty Display ("{0}    {1}" -f $item.Token,$item.Description);[void]$list.Items.Add($item)};[Windows.Controls.Grid]::SetRow($list,2);$layout.Children.Add($list)|Out-Null
+    $buttons=New-Object Windows.Controls.StackPanel;$buttons.Orientation='Horizontal';$buttons.HorizontalAlignment='Right';$buttons.Margin='16,0,16,14'
+    $close=New-Object Windows.Controls.Button;$close.Content='FECHAR';$close.Width=105;$close.Height=34;$close.Margin='0,0,8,0';$close.Add_Click({$dialog.Close()});$buttons.Children.Add($close)|Out-Null
+    $insert=New-Object Windows.Controls.Button;$insert.Content='INSERIR';$insert.Width=115;$insert.Height=34;$insert.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$insert.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$insert.FontWeight='Bold';$insert.Add_Click({if($list.SelectedItem){$CustomizeFolderCheck.IsChecked=$true;Sync-FolderPattern;$token=[string]$list.SelectedItem.Token;$position=[Math]::Min($FolderPatternText.SelectionStart,$FolderPatternText.Text.Length);$FolderPatternText.Text=$FolderPatternText.Text.Insert($position,$token);$FolderPatternText.SelectionStart=$position+$token.Length;$FolderPatternText.Focus();$dialog.Close()}});$buttons.Children.Add($insert)|Out-Null
+    [Windows.Controls.Grid]::SetRow($buttons,3);$layout.Children.Add($buttons)|Out-Null;$dialog.Content=$layout;[void]$dialog.ShowDialog()
 }
 
 function Get-TemplateCriteriaError {
     param([string]$Template)
+    if($CustomizeFolderCheck.IsChecked){return $null}
     $hasDate = $Template -match '\{(AAAA|AA|MES|MES_NUM|DIA)\}'
     $hasGenre = $Template -match '\{GENERO\}'
     $hasBpm = $Template -match '\{(BPM|BPM_RANGE)\}'
@@ -296,42 +395,37 @@ function Refresh-PreviewFilter {
     if (-not $PreviewGrid.ItemsSource) { return }
     $view = [Windows.Data.CollectionViewSource]::GetDefaultView($PreviewGrid.ItemsSource)
     $search = $SearchText.Text.Trim().ToLowerInvariant()
-    $onlyMissingMetadata = [bool]$MetadataMissingCheck.IsChecked
+    $onlyMissingMetadata = (Get-SelectedTag $OrganizerListFilterCombo) -eq 'Missing'
     $predicate = [Predicate[object]]{
         param($item)
         $trackText = "$($item.Name) $($item.OutputName) $($item.Title)".ToLowerInvariant()
         $matchesSearch = -not $search -or $trackText.Contains($search)
-        $hasMissingMetadata = $item.MissingTitle -or -not $item.Artist -or -not $item.Album -or $item.MissingGenre -or -not $item.Genre -or -not $item.Year -or -not $item.Bpm -or -not $item.Key
+        $hasMissingMetadata = $item.MissingTitle -or -not $item.Artist -or -not $item.Album -or $item.MissingGenre -or -not $item.Genre -or -not $item.Year
         return $matchesSearch -and (-not $onlyMissingMetadata -or $hasMissingMetadata)
     }.GetNewClosure()
     $view.Filter = $predicate; $view.Refresh()
 }
 
+function Update-TrackMetadataStatus {
+    param([Parameter(Mandatory)]$Track,[string]$Override='')
+    if($Override){$value=$Override}else{
+        $labels=New-Object Collections.Generic.List[string]
+        if($Track.MissingTitle -or -not$Track.Title){$labels.Add('Título faltante')}
+        if(-not$Track.Artist){$labels.Add('Artista faltante')}
+        if(-not$Track.Album){$labels.Add('Álbum faltante')}
+        if($Track.MissingGenre -or -not$Track.Genre){$labels.Add('Gênero faltante')}
+        if(-not$Track.Year){$labels.Add('Ano faltante')}
+        $value=if($labels.Count){$labels -join ' • '}else{'Dados completos'}
+    }
+    if($Track.PSObject.Properties['MetadataStatus']){$Track.MetadataStatus=$value}else{$Track|Add-Member NoteProperty MetadataStatus $value}
+}
+
 function Update-Dashboard {
     $health = Get-LibraryHealth -Tracks @($script:Tracks)
     $TotalCount.Text = [string]$health.Total
-    $cards = @(
-        [pscustomobject]@{ Border=$GenreCounter1; Label=$GenreLabel1; Count=$ReadyCount },
-        [pscustomobject]@{ Border=$GenreCounter2; Label=$GenreLabel2; Count=$NoGenreCount },
-        [pscustomobject]@{ Border=$GenreCounter3; Label=$GenreLabel3; Count=$DuplicateCount }
-    )
-    $genres = @($script:Tracks | ForEach-Object {
-        $genre = ([string]$_.Genre).Trim()
-        if (-not $genre) { $genre = 'SEM GÊNERO' }
-        $genre
-    } | Group-Object | Sort-Object @{Expression='Count';Descending=$true}, @{Expression='Name';Descending=$false})
-    for ($i=0; $i -lt $cards.Count; $i++) {
-        if ($i -lt $genres.Count) {
-            $cards[$i].Label.Text = ('TRACKS DE {0}' -f ([string]$genres[$i].Name).ToUpperInvariant())
-            $cards[$i].Label.ToolTip = $cards[$i].Label.Text
-            $cards[$i].Count.Text = [string]$genres[$i].Count
-            $cards[$i].Border.Visibility = 'Visible'
-        } else {
-            $cards[$i].Label.Text = 'TRACKS POR GÊNERO'
-            $cards[$i].Count.Text = '0'
-            $cards[$i].Border.Visibility = 'Collapsed'
-        }
-    }
+    $missing=@($script:Tracks|Where-Object{$_.MissingTitle -or -not$_.Artist -or -not$_.Album -or $_.MissingGenre -or -not$_.Genre -or -not$_.Year}).Count
+    $GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text=[string]$missing;$GenreCounter1.Visibility='Visible'
+    $GenreCounter2.Visibility='Collapsed';$GenreCounter3.Visibility='Collapsed'
 }
 
 function Update-Duplicates {
@@ -402,7 +496,7 @@ function Update-OrganizationPlan {
         Set-Status 'Calculando destinos automaticamente…' 65
         $script:Plan = New-OrganizationPlan -Tracks $script:Tracks -Source $source -Destination $destination -Template $template -TreeMode 'FlattenSource' -Action (Get-SelectedTag $ActionCombo) -Conflict (Get-SelectedTag $ConflictCombo) -DateSource (Get-SelectedTag $DateSourceCombo) -RenameFiles:$RenameFilesCheck.IsChecked -MissingMetadataPolicy (Get-SelectedTag $MissingPolicyCombo) -CreateReport:$CreateReportCheck.IsChecked -CreateRestore:$CreateRestoreCheck.IsChecked -Settings $script:Settings
         $PreviewGrid.ItemsSource = $script:Tracks
-        Update-Dashboard; Refresh-PreviewFilter
+        Update-Dashboard; Refresh-PreviewFilter;Sync-OrganizerPlaylistName
         $ready = @($script:Plan.Items | Where-Object Status -eq 'Ready').Count; $blocked = @($script:Plan.Items | Where-Object Status -in @('Error','Conflict')).Count; $skipped = @($script:Plan.Items | Where-Object Status -eq 'Skip').Count
         $PlanSummary.Text = "$ready serão organizados em $destination • $skipped ignorados • $blocked conflitos/erros"
         $ApplyButton.IsEnabled = ($ready -gt 0 -and $blocked -eq 0)
@@ -428,7 +522,7 @@ function Invoke-CurrentPlan {
     }
     $verb = if ($script:Plan.Action -eq 'Move') { 'mover' } else { 'copiar' }
     $rekordboxWarning=if($SendRekordboxCheck.IsChecked){"`n`nO CRIVO DJ também gravará a playlist diretamente no banco do Rekordbox. O Rekordbox e o rekordboxAgent precisam estar fechados; um backup será criado antes da escrita."}else{''}
-    if ([Windows.MessageBox]::Show($window, "Confirmar e $verb $(@($script:Plan.Items | Where-Object Status -eq 'Ready').Count) track(s)?$rekordboxWarning", 'Confirmar organização', [Windows.MessageBoxButton]::YesNo, [Windows.MessageBoxImage]::Question) -ne [Windows.MessageBoxResult]::Yes) { return }
+    if (-not(Show-CrivoConfirm -Message "Confirmar e $verb $(@($script:Plan.Items | Where-Object Status -eq 'Ready').Count) track(s)?$rekordboxWarning" -Title 'Confirmar organização' -ConfirmText 'ORGANIZAR')) { return }
     try {
         $ChooseFolderButton.IsEnabled=$false; $ApplyButton.IsEnabled=$false
         $progressAction = { param($current,$total,$name) Set-Status "Organizando $name ($current de $total)" ([int](($current/[Math]::Max(1,$total))*100)) }
@@ -470,13 +564,13 @@ function Show-MetadataReview {
     $cancel=New-Object Windows.Forms.Button;$cancel.Text='Cancelar';$cancel.Left=968;$cancel.Top=10;$cancel.Width=110;$cancel.Height=32;$cancel.DialogResult='Cancel';$bottom.Controls.Add($cancel)
     $intro=New-Object Windows.Forms.Panel;$intro.Dock='Top';$intro.Height=48;$intro.BackColor=[Drawing.Color]::FromArgb(214,214,214)
     $introText=New-Object Windows.Forms.Label;$introText.Dock='Fill';$introText.Padding=New-Object Windows.Forms.Padding(10,7,10,5);$introText.Text="Confira os dados encontrados e marque somente o que deseja usar.`r`nOs arquivos só serão alterados se a opção de gravar tags estiver marcada.";$introText.ForeColor=[Drawing.Color]::Black;$intro.Controls.Add($introText)
-    $form.Controls.Add($grid);$form.Controls.Add($bottom);$form.Controls.Add($intro);$form.AcceptButton=$apply;$form.CancelButton=$cancel
+    $form.Controls.Add($grid);$form.Controls.Add($bottom);$form.Controls.Add($intro);$form.AcceptButton=$apply;$form.CancelButton=$cancel;Set-CrivoFormStyle -Form $form -Title 'Revisar dados encontrados online'
     if($form.ShowDialog() -ne [Windows.Forms.DialogResult]::OK){return}
     $approved=New-Object Collections.Generic.List[object]
     foreach($row in $grid.Rows){if([bool]$row.Cells[0].Value){$item=$row.Tag;if(Set-TrackSuggestion -Track $item.Track -Suggestion $item.Suggestion -FillOnlyEmpty:(-not$replace.Checked)){$approved.Add($item.Track)}}}
     if(-not$approved.Count){Show-Message 'Nenhum dado encontrado foi marcado para uso.' 'Buscar dados ausentes';return}
     $tagSummary='';if($write.Checked){$tagResult=Write-ApprovedMetadata -Tracks $approved.ToArray();$tagSummary="`nTags gravadas: $($tagResult.Updated)`nErros de gravação: $($tagResult.Errors)`nBackup registrado no histórico."}
-    Update-Dashboard;if($script:DestinationChosen){Invalidate-Plan}else{$PreviewGrid.Items.Refresh()};Show-Message "Dados aplicados em $($approved.Count) faixa(s).$tagSummary" 'Dados das faixas atualizados'
+    foreach($track in $approved){Update-TrackMetadataStatus -Track $track};Update-Dashboard;if($script:DestinationChosen){Invalidate-Plan}else{$PreviewGrid.Items.Refresh()};Show-Message "Dados aplicados em $($approved.Count) faixa(s).$tagSummary" 'Dados das faixas atualizados'
 }
 
 function Invoke-OnlineEnrichment {
@@ -484,12 +578,13 @@ function Invoke-OnlineEnrichment {
     $candidates=@($script:Tracks|Where-Object{$_.Selected -and ($_.MissingTitle -or -not$_.Artist -or -not$_.Album -or $_.MissingGenre -or -not$_.Year)})
     if(-not$candidates.Count){Show-Message 'As faixas selecionadas já possuem título, artista, álbum, gênero e ano.' 'Buscar dados ausentes';return}
     $estimated=[Math]::Ceiling($candidates.Count*2.2/60)
-    if([Windows.MessageBox]::Show($window,"Buscar na internet título, artista, álbum, gênero e ano ausentes de $($candidates.Count) faixa(s)?`n`nVocê revisará os resultados antes de aplicar. Nenhum arquivo será alterado nesta etapa.`nTempo estimado: $estimated minuto(s). O áudio não será enviado.",'Buscar dados ausentes',[Windows.MessageBoxButton]::YesNo,[Windows.MessageBoxImage]::Question)-ne[Windows.MessageBoxResult]::Yes){return}
+    if(-not(Show-CrivoConfirm -Message "Buscar automaticamente título, artista, álbum, gênero e ano ausentes de $($candidates.Count) track(s)?`n`nVocê revisará os resultados antes de aplicar. Nenhum arquivo será alterado nesta etapa.`nTempo estimado: $estimated minuto(s). O áudio não será enviado." -Title 'Buscar dados ausentes automaticamente' -ConfirmText 'BUSCAR')){return}
     $matches=New-Object Collections.Generic.List[object];$EnrichMetadataButton.IsEnabled=$false
     try{
-        for($i=0;$i -lt$candidates.Count;$i++){$track=$candidates[$i];Set-Status "Buscando dados: $($track.Name) ($($i+1) de $($candidates.Count))" ([int](($i+1)/$candidates.Count*100));$suggestion=Get-OnlineMetadataSuggestion -Track $track -Settings $script:Settings;if($suggestion.Found){$matches.Add([pscustomobject]@{Track=$track;Suggestion=$suggestion})}}
+        for($i=0;$i -lt$candidates.Count;$i++){$track=$candidates[$i];Update-TrackMetadataStatus -Track $track -Override 'Buscando dados automaticamente…';Set-Status "Buscando dados: $($track.Name) ($($i+1) de $($candidates.Count))" ([int](($i+1)/$candidates.Count*100));$suggestion=Get-OnlineMetadataSuggestion -Track $track -Settings $script:Settings;if($suggestion.Found){Update-TrackMetadataStatus -Track $track -Override 'Dados encontrados — revise antes de aplicar';$matches.Add([pscustomobject]@{Track=$track;Suggestion=$suggestion})}else{Update-TrackMetadataStatus -Track $track -Override 'Não encontrado automaticamente — edite manualmente na lista'}}
         Set-Status "Busca concluída — dados encontrados para $($matches.Count) faixa(s)" 100
-        if($matches.Count){Show-MetadataReview -Matches $matches.ToArray()}else{Show-Message 'Nenhum dado correspondente foi encontrado nas fontes online.' 'Buscar dados ausentes'}
+        $PreviewGrid.Items.Refresh();Refresh-PreviewFilter
+        if($matches.Count){Show-MetadataReview -Matches $matches.ToArray()}else{Show-Message 'Nenhum dado foi encontrado automaticamente. Selecione uma track na lista e use Editar dados faltantes para preencher manualmente.' 'Busca automática concluída'}
     }catch{Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao buscar dados online' Error;Set-Status 'Falha ao buscar dados das faixas' 0}
     finally{$EnrichMetadataButton.IsEnabled=$true}
 }
@@ -580,7 +675,7 @@ function Get-ODTEnvironmentChecks {
     $rbCandidates=@($configured,"$env:ProgramFiles\rekordbox\rekordbox.exe","$env:ProgramFiles\Pioneer\rekordbox 7\rekordbox.exe","$env:ProgramFiles\AlphaTheta\rekordbox 7\rekordbox.exe","${env:ProgramFiles(x86)}\Pioneer\rekordbox\rekordbox.exe")
     $rbExe=@($rbCandidates|Where-Object{$_ -and (Test-Path -LiteralPath $_ -PathType Leaf)}|Select-Object -First 1);$checks.Add([pscustomobject]@{Name='Rekordbox';Ok=[bool]$rbExe.Count;Required=$false;Detail=$(if($rbExe.Count){'executável encontrado'}else{'opcional: não localizado'})})
     try{$database=Get-RekordboxDatabasePath;$databaseOk=Test-Path -LiteralPath $database -PathType Leaf}catch{$databaseOk=$false};$checks.Add([pscustomobject]@{Name='Banco do Rekordbox';Ok=[bool]$databaseOk;Required=$false;Detail=$(if($databaseOk){'base encontrada'}else{'opcional: base não localizada'})})
-    if($IncludeInternet){$internetOk=$false;try{$response=Invoke-WebRequest -UseBasicParsing -Uri 'https://musicbrainz.org/ws/2/' -Headers @{'User-Agent'='CRIVO-DJ/0.9 closed-beta'} -TimeoutSec 8;$internetOk=[bool]$response}catch{$internetOk=[bool]$_.Exception.PSObject.Properties['Response']};$checks.Add([pscustomobject]@{Name='Internet';Ok=$internetOk;Required=$true;Detail=$(if($internetOk){'conexão disponível'}else{'sem resposta'})})}
+    if($IncludeInternet){$internetOk=$false;try{$response=Invoke-WebRequest -UseBasicParsing -Uri 'https://musicbrainz.org/ws/2/' -Headers @{'User-Agent'='CRIVO-DJ/0.9.9'} -TimeoutSec 8;$internetOk=[bool]$response}catch{$internetOk=[bool]$_.Exception.PSObject.Properties['Response']};$checks.Add([pscustomobject]@{Name='Internet';Ok=$internetOk;Required=$true;Detail=$(if($internetOk){'conexão disponível'}else{'sem resposta'})})}
     return $checks.ToArray()
 }
 
@@ -881,14 +976,64 @@ function Update-AuditSelectionButtons {
 
 function Show-AuditMetadataEditor {
     param([Parameter(Mandatory)]$Row)
-    $form=New-Object Windows.Forms.Form;$form.Text='CRIVO DJ — Adicionar ou corrigir metadados';$form.Width=620;$form.Height=500;$form.StartPosition='CenterParent';$form.FormBorderStyle='FixedDialog';$form.MaximizeBox=$false;$form.MinimizeBox=$false;$form.Font=New-Object Drawing.Font('Arial',9);$form.BackColor=[Drawing.Color]::FromArgb(205,205,205);$form.ForeColor=[Drawing.Color]::Black
-    $intro=New-Object Windows.Forms.Label;$intro.Left=18;$intro.Top=15;$intro.Width=570;$intro.Height=46;$intro.ForeColor=[Drawing.Color]::Black;$intro.Text="Preencha somente o que deseja salvar. A track será atualizada no arquivo e, quando fizer parte da coleção, também no Rekordbox com backup prévio.";$form.Controls.Add($intro)
-    $fields=[ordered]@{Title='TÍTULO';Artist='ARTISTA';Album='ÁLBUM';Genre='GÊNERO';Year='ANO';Bpm='BPM';Key='TONALIDADE'};$boxes=@{};$top=72
-    foreach($field in $fields.Keys){$label=New-Object Windows.Forms.Label;$label.Left=18;$label.Top=$top;$label.Width=110;$label.Height=24;$label.Text=$fields[$field];$label.TextAlign='MiddleLeft';$label.ForeColor=[Drawing.Color]::Black;$form.Controls.Add($label);$box=New-Object Windows.Forms.TextBox;$box.Left=132;$box.Top=$top;$box.Width=445;$box.Height=25;$box.ForeColor=[Drawing.Color]::Black;$box.BackColor=[Drawing.Color]::FromArgb(241,240,236);$value=if($Row.PSObject.Properties[$field]){[string]$Row.$field}else{''};$box.Text=$value;$form.Controls.Add($box);$boxes[$field]=$box;$top+=43}
-    $fileLabel=New-Object Windows.Forms.Label;$fileLabel.Left=18;$fileLabel.Top=378;$fileLabel.Width=560;$fileLabel.Height=28;$fileLabel.AutoEllipsis=$true;$fileLabel.ForeColor=[Drawing.Color]::FromArgb(60,60,60);$fileLabel.Text=[string]$Row.Location;$form.Controls.Add($fileLabel)
-    $save=New-Object Windows.Forms.Button;$save.Text='SALVAR METADADOS';$save.Left=370;$save.Top=414;$save.Width=135;$save.Height=32;$save.DialogResult='OK';$form.Controls.Add($save)
-    $cancel=New-Object Windows.Forms.Button;$cancel.Text='CANCELAR';$cancel.Left=512;$cancel.Top=414;$cancel.Width=75;$cancel.Height=32;$cancel.DialogResult='Cancel';$form.Controls.Add($cancel);$form.AcceptButton=$save;$form.CancelButton=$cancel
-    if($form.ShowDialog() -ne [Windows.Forms.DialogResult]::OK){return $null}
+    [xml]$editorXaml=@'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Width="760" Height="585" WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Background="#171613" FontFamily="Segoe UI" Foreground="#171613">
+  <Window.Resources>
+    <Style TargetType="TextBlock" />
+    <Style TargetType="TextBox">
+      <Setter Property="Height" Value="34"/><Setter Property="Padding" Value="9,6"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="#F3F1EC"/><Setter Property="Foreground" Value="#171613"/><Setter Property="BorderBrush" Value="#8B877F"/><Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="10"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Margin" Value="0,0,0,5"/></Style>
+    <Style TargetType="Button"><Setter Property="Height" Value="36"/><Setter Property="Padding" Value="18,5"/><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/></Style>
+  </Window.Resources>
+  <Border BorderBrush="#171613" BorderThickness="1" Background="#D5D1C8">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid x:Name="Header" Background="#171613">
+        <TextBlock Text="ADICIONAR OU CORRIGIR METADADOS" Foreground="#F2F0EA" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Margin="16,0,50,0"/>
+        <Button x:Name="CloseButton" Content="×" Width="44" Height="43" Padding="0" HorizontalAlignment="Right" Background="#171613" Foreground="#F2F0EA" BorderThickness="0" FontSize="18"/>
+      </Grid>
+      <Border Grid.Row="1" Background="#E4E1D9" Padding="20,16,20,14">
+        <StackPanel>
+          <TextBlock Text="REVISE OS DADOS DA TRACK" FontSize="15" FontWeight="Bold"/>
+          <TextBlock Text="Preencha somente o que deseja salvar. O arquivo será atualizado com histórico de restauração; na auditoria da biblioteca, o Rekordbox também recebe a correção com backup." TextWrapping="Wrap" Foreground="#625E57" FontSize="11" Margin="0,5,0,0" LineHeight="17"/>
+        </StackPanel>
+      </Border>
+      <Border Grid.Row="2" Margin="20,16,20,12" Padding="16" Background="#CBC7BE" BorderBrush="#969188" BorderThickness="1">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="14"/><RowDefinition Height="Auto"/><RowDefinition Height="14"/><RowDefinition Height="Auto"/><RowDefinition Height="14"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Grid.ColumnSpan="5"><TextBlock Text="TÍTULO" Style="{StaticResource FieldLabel}"/><TextBox x:Name="TitleBox"/></StackPanel>
+          <StackPanel Grid.Row="2" Grid.ColumnSpan="5"><TextBlock Text="ARTISTA" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ArtistBox"/></StackPanel>
+          <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"><TextBlock Text="ÁLBUM" Style="{StaticResource FieldLabel}"/><TextBox x:Name="AlbumBox"/></StackPanel>
+          <StackPanel Grid.Row="4" Grid.Column="4"><TextBlock Text="GÊNERO" Style="{StaticResource FieldLabel}"/><TextBox x:Name="GenreBox"/></StackPanel>
+          <StackPanel Grid.Row="6" Grid.Column="0"><TextBlock Text="ANO" Style="{StaticResource FieldLabel}"/><TextBox x:Name="YearBox" MaxLength="4"/></StackPanel>
+          <StackPanel Grid.Row="6" Grid.Column="2"><TextBlock Text="BPM" Style="{StaticResource FieldLabel}"/><TextBox x:Name="BpmBox"/></StackPanel>
+          <StackPanel Grid.Row="6" Grid.Column="4"><TextBlock Text="TONALIDADE" Style="{StaticResource FieldLabel}"/><TextBox x:Name="KeyBox"/></StackPanel>
+        </Grid>
+      </Border>
+      <Border Grid.Row="3" Margin="20,0,20,12" Padding="12,9" Background="#E4E1D9" BorderBrush="#AAA59B" BorderThickness="1">
+        <StackPanel><TextBlock Text="ARQUIVO" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="FilePathText" FontSize="10" Foreground="#625E57" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/></StackPanel>
+      </Border>
+      <Grid Grid.Row="4" Margin="20,0,20,18">
+        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="8"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <TextBlock Text="Você poderá desfazer esta alteração pelo histórico." Foreground="#625E57" FontSize="10" VerticalAlignment="Center"/>
+        <Button x:Name="CancelButton" Grid.Column="1" Content="CANCELAR" MinWidth="104" Background="#C5C1B8" Foreground="#171613" BorderBrush="#77726A" IsCancel="True"/>
+        <Button x:Name="SaveButton" Grid.Column="3" Content="SALVAR METADADOS" MinWidth="156" Background="#171613" Foreground="#F2F0EA" BorderBrush="#171613" IsDefault="True"/>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
+'@
+    $reader=New-Object System.Xml.XmlNodeReader $editorXaml
+    $dialog=[Windows.Markup.XamlReader]::Load($reader);if($window -and $window.IsLoaded){$dialog.Owner=$window};if($window.Icon){$dialog.Icon=$window.Icon}
+    $boxes=@{};foreach($field in @('Title','Artist','Album','Genre','Year','Bpm','Key')){$boxes[$field]=$dialog.FindName("${field}Box");$value=if($Row.PSObject.Properties[$field]){[string]$Row.$field}else{''};if($field -eq 'Genre' -and $value -eq 'Gênero faltante'){$value=''};$boxes[$field].Text=$value}
+    $dialog.FindName('FilePathText').Text=[string]$Row.Location
+    $dialog.FindName('Header').Add_MouseLeftButtonDown({if($_.ClickCount -eq 1){try{$dialog.DragMove()}catch{}}})
+    $dialog.FindName('CloseButton').Add_Click({$dialog.DialogResult=$false;$dialog.Close()})
+    $dialog.FindName('CancelButton').Add_Click({$dialog.DialogResult=$false;$dialog.Close()})
+    $dialog.FindName('SaveButton').Add_Click({$dialog.DialogResult=$true;$dialog.Close()})
+    if(-not$dialog.ShowDialog()){return $null}
     $year=$boxes.Year.Text.Trim();if($year -and $year -notmatch '^\d{4}$'){Show-Message 'Informe o ano com quatro dígitos, por exemplo 2026.' 'Metadados inválidos' Warning;return $null}
     $bpmText=$boxes.Bpm.Text.Trim();$bpm=0.0;if($bpmText){if(-not[Double]::TryParse(($bpmText -replace ',','.'),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$bpm) -or $bpm -lt 20 -or $bpm -gt 300){Show-Message 'Informe um BPM entre 20 e 300.' 'Metadados inválidos' Warning;return $null}}
     return [pscustomobject]@{Title=$boxes.Title.Text.Trim();Artist=$boxes.Artist.Text.Trim();Album=$boxes.Album.Text.Trim();Genre=$boxes.Genre.Text.Trim();Year=$year;Bpm=$(if($bpmText){$bpm}else{''});Key=$boxes.Key.Text.Trim()}
@@ -920,7 +1065,7 @@ function Edit-SelectedOrganizeMetadata {
     $selected=@($PreviewGrid.SelectedItems);if($selected.Count -ne 1){Show-Message 'Selecione uma única track na lista para editar os metadados.' 'Editar metadados';return};$track=$selected[0];$path=[string]$track.FullName
     if(-not(Test-Path -LiteralPath $path -PathType Leaf)){Show-Message 'O arquivo físico desta track não está disponível.' 'Editar metadados' Warning;return}
     $metadata=Show-AuditMetadataEditor -Row ([pscustomobject]@{Title=[string]$track.Title;Artist=[string]$track.Artist;Album=[string]$track.Album;Genre=[string]$track.Genre;Year=[string]$track.Year;Bpm=[string]$track.Bpm;Key=[string]$track.Key;Location=$path});if(-not$metadata){return}
-    $tagResult=$null;try{$tagResult=Write-ApprovedMetadata -Tracks @([pscustomobject]@{FullName=$path;Title=$metadata.Title;Artist=$metadata.Artist;Album=$metadata.Album;Genre=$metadata.Genre;Year=$metadata.Year;Bpm=$metadata.Bpm;Key=$metadata.Key}) -Template 'Edição manual da organização';if($tagResult.Errors){throw 'Não foi possível gravar os metadados no arquivo.'};foreach($field in @('Title','Artist','Album','Genre','Year','Bpm','Key')){if($metadata.$field){$track.$field=$metadata.$field}};if($track.Title){$track.MissingTitle=$false};if($track.Genre){$track.MissingGenre=$false};$PreviewGrid.Items.Refresh();Update-Dashboard;Refresh-PreviewFilter;Invalidate-Plan;Show-Message 'Metadados salvos no arquivo e no histórico do CRIVO DJ.' 'Metadados atualizados'}catch{if($tagResult -and $tagResult.Updated){try{Undo-Operation -Operation $tagResult.Operation|Out-Null}catch{}};Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao salvar metadados' Error}
+    $tagResult=$null;try{$tagResult=Write-ApprovedMetadata -Tracks @([pscustomobject]@{FullName=$path;Title=$metadata.Title;Artist=$metadata.Artist;Album=$metadata.Album;Genre=$metadata.Genre;Year=$metadata.Year;Bpm=$metadata.Bpm;Key=$metadata.Key}) -Template 'Edição manual da organização';if($tagResult.Errors){throw 'Não foi possível gravar os metadados no arquivo.'};foreach($field in @('Title','Artist','Album','Genre','Year','Bpm','Key')){if($metadata.$field){$track.$field=$metadata.$field}};if($track.Title){$track.MissingTitle=$false};if($metadata.Genre){$track.MissingGenre=$false};Update-TrackMetadataStatus -Track $track;$PreviewGrid.Items.Refresh();Update-Dashboard;Refresh-PreviewFilter;Invalidate-Plan;Show-Message 'Metadados salvos no arquivo e no histórico do CRIVO DJ.' 'Metadados atualizados'}catch{if($tagResult -and $tagResult.Updated){try{Undo-Operation -Operation $tagResult.Operation|Out-Null}catch{}};Write-AppLog -Message $_.Exception.ToString() -Level ERROR;Show-Message $_.Exception.Message 'Falha ao salvar metadados' Error}
 }
 
 function Show-AuditSelectionReview {
@@ -1034,7 +1179,7 @@ function Select-RekordboxExecutable {
 function Show-RulesDialog {
     $form = New-Object Windows.Forms.Form
     $form.Text='Regras, formatos e qualidade'; $form.Width=720; $form.Height=740; $form.AutoScroll=$true; $form.StartPosition='CenterParent'; $form.Font=New-Object Drawing.Font('Arial',9); $form.BackColor=[Drawing.Color]::FromArgb(195,195,195); $form.ForeColor=[Drawing.Color]::FromArgb(20,20,20)
-    $labels = @('Extensões de áudio (separadas por vírgula)','Extensões ignoradas','Pastas ignoradas','Normalização de gêneros (origem=destino)','Faixas de BPM (mín-máx=nome)','Pastas favoritas','Prioridade sem gênero (Metadata, SourceFolder, _PENDENTE)','Qualidade mínima: bitrate MP3, sample rate','Termos removidos do nome','Chave de cliente AcoustID (opcional)','Confiança mínima para pré-selecionar sugestões (0–100)')
+    $labels = @('Extensões de áudio (separadas por vírgula)','Extensões ignoradas','Pastas ignoradas','Normalização de gêneros (origem=destino)','Faixas de BPM (mín-máx=nome)','Pastas favoritas','Prioridade sem gênero (Metadata, SourceFolder, MissingGenre)','Qualidade mínima: bitrate MP3, sample rate','Termos removidos do nome','Chave de cliente AcoustID (opcional)','Confiança mínima para pré-selecionar sugestões (0–100)')
     $values = @(
         (@($script:Settings.AudioExtensions) -join ', '), (@($script:Settings.ExcludedExtensions) -join ', '), (@($script:Settings.ExcludedFolders) -join ', '),
         (@($script:Settings.GenreAliases.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join "`r`n"),
@@ -1053,6 +1198,7 @@ function Show-RulesDialog {
     $writeDefault=New-Object Windows.Forms.CheckBox;$writeDefault.Text='Gravar tags aprovadas por padrão';$writeDefault.Left=230;$writeDefault.Top=$y;$writeDefault.Width=240;$writeDefault.Checked=[bool]$script:Settings.InternetMetadata.WriteApprovedTags;$form.Controls.Add($writeDefault)
     $ok=New-Object Windows.Forms.Button; $ok.Text='Salvar regras'; $ok.Left=474; $ok.Top=$y-3; $ok.Width=100; $ok.DialogResult='OK'; $form.Controls.Add($ok)
     $cancel=New-Object Windows.Forms.Button; $cancel.Text='Cancelar'; $cancel.Left=584; $cancel.Top=$y-3; $cancel.Width=100; $cancel.DialogResult='Cancel'; $form.Controls.Add($cancel); $form.AcceptButton=$ok; $form.CancelButton=$cancel
+    Set-CrivoFormStyle -Form $form -Title 'Regras, formatos e qualidade'
     if($form.ShowDialog() -ne [Windows.Forms.DialogResult]::OK){return}
     try {
         $script:Settings.AudioExtensions=@($boxes[0].Text -split '[,;]' | ForEach-Object { $value=$_.Trim().ToLower();if($value -and -not$value.StartsWith('.')){'.'+$value}else{$value} } | Where-Object { $_ })
@@ -1062,7 +1208,7 @@ function Show-RulesDialog {
         $ranges=@(); foreach($line in $boxes[4].Lines){if($line -match '^\s*(\d+)\s*-\s*(\d+)\s*=(.+)$'){$ranges += [pscustomobject]@{Min=[int]$Matches[1];Max=[int]$Matches[2];Name=$Matches[3].Trim()}}}
         if($aliases.Count){$script:Settings.GenreAliases=[pscustomobject]$aliases}; if($ranges.Count){$script:Settings.BpmRanges=$ranges}
         $script:Settings.Favorites=@($boxes[5].Lines | ForEach-Object Trim | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) })
-        $priority=@($boxes[6].Text -split '[,;]' | ForEach-Object Trim | Where-Object { $_ -in @('Metadata','SourceFolder','_PENDENTE') }); if($priority.Count){$script:Settings.GenreFallbackPriority=$priority}
+        $priority=@($boxes[6].Text -split '[,;]' | ForEach-Object Trim | Where-Object { $_ -in @('Metadata','SourceFolder','MissingGenre','_PENDENTE') }|ForEach-Object{if($_ -eq '_PENDENTE'){'MissingGenre'}else{$_}}); if($priority.Count){$script:Settings.GenreFallbackPriority=$priority}
         if($boxes[7].Text -match '^\s*(\d+)\s*[,;]\s*(\d+)\s*$'){$script:Settings.Quality.MinimumMp3Bitrate=[int]$Matches[1];$script:Settings.Quality.MinimumSampleRate=[int]$Matches[2]}
         $script:Settings.NameRules.RemoveTerms=@($boxes[8].Text -split '[,;]' | ForEach-Object Trim | Where-Object { $_ })
         $script:Settings.InternetMetadata.AcoustIdClientKey=$boxes[9].Text.Trim();if($boxes[10].Text -match '^\d{1,3}$'){$script:Settings.InternetMetadata.MinimumConfidence=[Math]::Min(100,[Math]::Max(0,[int]$boxes[10].Text))}
@@ -1101,7 +1247,7 @@ function Choose-FavoriteFolder {
     if(-not $favorites.Count){Show-Message 'Nenhuma pasta favorita configurada. Use Regras e formatos para adicioná-las.';return}
     $form=New-Object Windows.Forms.Form; $form.Text='Pastas favoritas';$form.Width=620;$form.Height=330;$form.StartPosition='CenterParent';$form.Font=New-Object Drawing.Font('Arial',9);$form.BackColor=[Drawing.Color]::FromArgb(195,195,195);$form.ForeColor=[Drawing.Color]::FromArgb(20,20,20)
     $list=New-Object Windows.Forms.ListBox;$list.Dock='Fill';$list.BackColor=[Drawing.Color]::FromArgb(232,232,232);$list.ForeColor=[Drawing.Color]::FromArgb(20,20,20);$list.Items.AddRange([object[]]$favorites);$form.Controls.Add($list)
-    $button=New-Object Windows.Forms.Button;$button.Text='Usar pasta selecionada';$button.Dock='Bottom';$button.Height=38;$button.DialogResult='OK';$form.Controls.Add($button);$form.AcceptButton=$button
+    $button=New-Object Windows.Forms.Button;$button.Text='Usar pasta selecionada';$button.Dock='Bottom';$button.Height=38;$button.DialogResult='OK';$form.Controls.Add($button);$form.AcceptButton=$button;Set-CrivoFormStyle -Form $form -Title 'Pastas favoritas'
     if($form.ShowDialog() -eq [Windows.Forms.DialogResult]::OK -and $list.SelectedItem){Load-SourceFolder -Path ([string]$list.SelectedItem)}
 }
 
@@ -1109,17 +1255,17 @@ function Select-HistoryOperation {
     $operations=@(Get-OperationHistory | Where-Object { -not $_.UndoneAt }); if(-not $operations.Count){return $null}
     $form=New-Object Windows.Forms.Form;$form.Text='Escolha uma execução para desfazer';$form.Width=760;$form.Height=380;$form.StartPosition='CenterParent';$form.Font=New-Object Drawing.Font('Arial',9);$form.BackColor=[Drawing.Color]::FromArgb(195,195,195);$form.ForeColor=[Drawing.Color]::FromArgb(20,20,20)
     $list=New-Object Windows.Forms.ListBox;$list.Dock='Fill';$list.BackColor=[Drawing.Color]::FromArgb(232,232,232);$list.ForeColor=[Drawing.Color]::FromArgb(20,20,20);foreach($op in $operations){[void]$list.Items.Add(("{0} | {1} | {2} → {3}" -f $op.Date,$op.Action,$op.Source,$op.Destination))};$form.Controls.Add($list)
-    $button=New-Object Windows.Forms.Button;$button.Text='Desfazer selecionada';$button.Dock='Bottom';$button.Height=38;$button.DialogResult='OK';$form.Controls.Add($button);$form.AcceptButton=$button
+    $button=New-Object Windows.Forms.Button;$button.Text='Desfazer selecionada';$button.Dock='Bottom';$button.Height=38;$button.DialogResult='OK';$form.Controls.Add($button);$form.AcceptButton=$button;Set-CrivoFormStyle -Form $form -Title 'Escolher execução para desfazer'
     if($form.ShowDialog() -eq [Windows.Forms.DialogResult]::OK -and $list.SelectedIndex -ge 0){return $operations[$list.SelectedIndex]}; return $null
 }
 
 function Load-SourceFolder {
     param([Parameter(Mandatory)][string]$Path)
     if(-not (Test-Path -LiteralPath $Path -PathType Container)){return}
-    $SourceText.Text=$Path; $OrganizerPlaylistNameText.Text=Get-DefaultOrganizerPlaylistName -Path $Path; $DestinationText.Text='Escolha onde salvar a organização'; $script:DestinationChosen=$false
+    $SourceText.Text=$Path; $script:CustomPlaylistName=Get-DefaultOrganizerPlaylistName -Path $Path; $OrganizerPlaylistNameText.Text=$script:CustomPlaylistName; $DestinationText.Text='Escolha onde salvar a organização'; $script:DestinationChosen=$false
     $DestinationSame.IsChecked=$false; $DestinationOther.IsChecked=$false; $ChooseDestinationButton.IsEnabled=$false
     $ConfigPanel.IsEnabled=$true; $ConfigPanel.Opacity=1; $script:Plan=$null; $script:Tracks=@(); $PreviewGrid.ItemsSource=@()
-    $PlanSummary.Text='Analisando a pasta selecionada…'; Set-Status 'Pasta selecionada — iniciando análise' 0; [void](Scan-SelectedFolder)
+    $PlanSummary.Text='Analisando a pasta selecionada…'; Set-Status 'Pasta selecionada — iniciando análise' 0; [void](Scan-SelectedFolder);Sync-OrganizerPlaylistName
     $script:WatchSnapshot=@{}; foreach($file in @(Get-WatchCandidates -Source $Path)){$script:WatchSnapshot[$file.FullName]=$true}
 }
 
@@ -1144,7 +1290,8 @@ foreach ($radio in @($ModeDate,$ModeGenre,$ModeDateGenre,$ModeGenreBpm)) {
     $radio.Add_Checked({ Sync-FolderPattern; Invalidate-Plan })
 }
 $CustomizeFolderCheck.Add_Click({ Sync-FolderPattern; Invalidate-Plan })
-$FolderPatternText.Add_TextChanged({ Invalidate-Plan })
+$TemplateVariablesButton.Add_Click({Show-TemplateVariablesDialog})
+$FolderPatternText.Add_TextChanged({ Invalidate-Plan;Sync-OrganizerPlaylistName })
 foreach ($control in @($RenameFilesCheck,$CreateReportCheck,$CreateRestoreCheck)) { $control.Add_Click({ Invalidate-Plan }) }
 $OnlyAudioCheck.Add_Click({if(Test-Path -LiteralPath $SourceText.Text -PathType Container){[void](Scan-SelectedFolder);Invalidate-Plan}})
 $DetectDuplicatesCheck.Add_Click({ Update-Duplicates; Invalidate-Plan })
@@ -1154,14 +1301,14 @@ $DuplicateLevelCombo.Add_SelectionChanged({
 })
 $ApplyButton.Add_Click({ Invoke-CurrentPlan })
 $SearchText.Add_TextChanged({ Refresh-PreviewFilter })
-$MetadataMissingCheck.Add_Click({ Refresh-PreviewFilter })
+$OrganizerListFilterCombo.Add_SelectionChanged({ Refresh-PreviewFilter })
 $EditTrackMetadataButton.Add_Click({Edit-SelectedOrganizeMetadata})
 $PreviewGrid.Add_SelectionChanged({Update-OrganizeMetadataButton})
 
 $UndoButton.Add_Click({
     $operation = Select-HistoryOperation
     if (-not $operation) { Refresh-UndoState; return }
-    if ([Windows.MessageBox]::Show($window, "Desfazer a organização de $($operation.Date)?", 'Confirmar desfazer', [Windows.MessageBoxButton]::YesNo, [Windows.MessageBoxImage]::Question) -eq [Windows.MessageBoxResult]::Yes) {
+    if (Show-CrivoConfirm -Message "Desfazer a organização de $($operation.Date)?" -Title 'Confirmar desfazer' -ConfirmText 'DESFAZER') {
         $result=@(Undo-Operation -Operation $operation); $errors=@($result | Where-Object Status -in @('Erro','Conflito')).Count; Refresh-UndoState
         Show-Message "Desfazer concluído. $($result.Count-$errors) item(ns) restaurado(s); $errors conflito(s)/erro(s)."
     }
@@ -1205,7 +1352,10 @@ $AuditSearchText.Add_TextChanged({Update-RekordboxAuditView})
 $AuditFilterCombo.Add_SelectionChanged({Update-RekordboxAuditView})
 $RekordboxAuditGrid.Add_SelectionChanged({Update-AuditSelectionButtons})
 $ChooseRekordboxExeButton.Add_Click({Select-RekordboxExecutable})
-$SendRekordboxCheck.Add_Click({$OrganizerPlaylistNameText.IsEnabled=[bool]$SendRekordboxCheck.IsChecked})
+$SendRekordboxCheck.Add_Click({Sync-OrganizerPlaylistName})
+$PlaylistNameFromFolderRadio.Add_Checked({Sync-OrganizerPlaylistName})
+$PlaylistNameCustomRadio.Add_Checked({Sync-OrganizerPlaylistName})
+$OrganizerPlaylistNameText.Add_TextChanged({if($PlaylistNameCustomRadio.IsChecked -and -not[string]::IsNullOrWhiteSpace($OrganizerPlaylistNameText.Text)){$script:CustomPlaylistName=$OrganizerPlaylistNameText.Text.Trim()}})
 $WatchFolderCheck.Add_Click({$script:Settings.WatchFolderEnabled=[bool]$WatchFolderCheck.IsChecked;Save-Settings})
 $PreviewGrid.Add_CellEditEnding({
     param($sender,$eventArgs)
@@ -1305,15 +1455,18 @@ Update-ODTEnvironmentStatus|Out-Null
 if ($ValidateOnly) {
     if (-not $window.Icon) { throw 'O ícone próprio do CRIVO DJ não foi carregado na janela.' }
     $tabOrder=@($MainTabs.Items|ForEach-Object{[string]$_.Header}) -join '|';if($tabOrder -ne 'BAIXAR|ORGANIZAR|AUDITORIA'){throw "Ordem de abas inválida: $tabOrder"}
-    if(-not$SourceText -or -not$SendRekordboxCheck -or -not$OrganizerPlaylistNameText -or -not$EditTrackMetadataButton -or -not$AuditLibraryModeButton -or -not$AuditUsbModeButton -or -not$AuditUsbPathText -or -not$AuditFilterCombo -or -not$EditAuditMetadataButton -or -not$ReviewAuditButton -or -not$AuditDuplicateCount -or -not$SystemCheckButton -or -not$ExportDiagnosticButton -or -not$EnvironmentStatusText){throw 'Controles do fluxo Baixar > Organizar > Auditoria não foram carregados.'}
+    if(-not$SourceText -or -not$SendRekordboxCheck -or -not$OrganizerPlaylistNameText -or -not$PlaylistNameFromFolderRadio -or -not$PlaylistNameCustomRadio -or -not$TemplateVariablesButton -or -not$OrganizerListFilterCombo -or -not$EditTrackMetadataButton -or -not$AuditLibraryModeButton -or -not$AuditUsbModeButton -or -not$AuditUsbPathText -or -not$AuditFilterCombo -or -not$EditAuditMetadataButton -or -not$ReviewAuditButton -or -not$AuditDuplicateCount -or -not$SystemCheckButton -or -not$ExportDiagnosticButton -or -not$EnvironmentStatusText){throw 'Controles do fluxo Baixar > Organizar > Auditoria não foram carregados.'}
     if($window.Title -ne 'CRIVO DJ por MANELZ0RD'){throw 'O título compacto da janela não foi aplicado.'}
     $auditHeaders=@($RekordboxAuditGrid.Columns|ForEach-Object{[string]$_.Header});foreach($header in @('ÁLBUM','GÊNERO','ANO','BPM','TONALIDADE','FORMATO','BITRATE','SAMPLE RATE','PLAYLIST(S)','ANÁLISE','PROBLEMA','DUPLICIDADE','PASTA ORIGEM','NÍVEL','DIAGNÓSTICO','LOCAL')){if($auditHeaders -notcontains $header){throw "A coluna de auditoria '$header' não foi carregada."}}
+    $ConfigPanel.IsEnabled=$true
     $ModeGenreBpm.IsChecked=$true; Sync-FolderPattern
     if ($FolderPatternText.Text -ne '{GENERO} - {BPM_RANGE}') { throw 'O modelo de pasta não acompanhou o critério Gênero + BPM.' }
-    $CustomizeFolderCheck.IsChecked=$true; Sync-FolderPattern; $FolderPatternText.Text='{GENERO}'
-    if (-not (Get-TemplateCriteriaError -Template $FolderPatternText.Text)) { throw 'A personalização permitiu remover um critério obrigatório.' }
+    if ($TemplateVariablesButton.IsEnabled) { throw 'O botão de variáveis ficou disponível sem ativar a personalização.' }
+    $CustomizeFolderCheck.IsChecked=$true; Sync-FolderPattern; $FolderPatternText.Text='Minha pesquisa'
+    if (-not $TemplateVariablesButton.IsEnabled) { throw 'O botão de variáveis não foi liberado pela personalização.' }
+    if (Get-TemplateCriteriaError -Template $FolderPatternText.Text) { throw 'Um nome livre sem variáveis foi recusado.' }
     $FolderPatternText.Text='Estilo - {GENERO}\Faixa - {BPM_RANGE}'
-    if (Get-TemplateCriteriaError -Template $FolderPatternText.Text) { throw 'Um modelo personalizado válido foi recusado.' }
+    if (Get-TemplateCriteriaError -Template $FolderPatternText.Text) { throw 'Um modelo personalizado com variáveis foi recusado.' }
     $CustomizeFolderCheck.IsChecked=$false; $ModeDateGenre.IsChecked=$true; Sync-FolderPattern
     if ($ValidationSource) {
         $SourceText.Text=$ValidationSource; $DestinationText.Text='Escolha onde salvar a organização'; $ConfigPanel.IsEnabled=$true; $ConfigPanel.Opacity=1
@@ -1411,31 +1564,27 @@ if($MarketingScreenshots){
     Save-MarketingScreenshot '01-baixar-tracks.png'
 
     $demoOrganize=@(
-        [pscustomobject]@{Selected=$true;OutputName='Aurora Lines - Midnight Signal.mp3';Artist='Aurora Lines';Genre='Deep House';Destination='2026 - 10 - Outubro\Deep House\120-124 BPM'},
-        [pscustomobject]@{Selected=$true;OutputName='Nilo S. - Low Pressure.mp3';Artist='Nilo S.';Genre='UK Garage';Destination='2026 - 10 - Outubro\UK Garage\130-134 BPM'},
-        [pscustomobject]@{Selected=$true;OutputName='Mabel Costa - Sunday Service (Club Mix).mp3';Artist='Mabel Costa';Genre='House';Destination='2026 - 10 - Outubro\House\125-129 BPM'},
-        [pscustomobject]@{Selected=$true;OutputName='Theo Vale - Glass Rooms.mp3';Artist='Theo Vale';Genre='Minimal House';Destination='2026 - 10 - Outubro\Minimal House\125-129 BPM'},
-        [pscustomobject]@{Selected=$true;OutputName='Luma - Soft Focus.mp3';Artist='Luma';Genre='Tech House';Destination='2026 - 10 - Outubro\Tech House\125-129 BPM'},
-        [pscustomobject]@{Selected=$true;OutputName='Caio Norte - Afterimage.mp3';Artist='Caio Norte';Genre='House';Destination='2026 - 10 - Outubro\House\125-129 BPM'}
+        [pscustomobject]@{Selected=$true;OutputName='Aurora Lines - Midnight Signal.mp3';Artist='Aurora Lines';Genre='Deep House';MetadataStatus='Dados completos';Destination='2026 - 10 - Outubro\Deep House\120-124 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Nilo S. - Low Pressure.mp3';Artist='Nilo S.';Genre='UK Garage';MetadataStatus='Dados completos';Destination='2026 - 10 - Outubro\UK Garage\130-134 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Mabel Costa - Sunday Service (Club Mix).mp3';Artist='Mabel Costa';Genre='House';MetadataStatus='Ano faltante';Destination='2026 - 10 - Outubro\House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Theo Vale - Glass Rooms.mp3';Artist='Theo Vale';Genre='Minimal House';MetadataStatus='Álbum faltante • Ano faltante';Destination='2026 - 10 - Outubro\Minimal House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Luma - Soft Focus.mp3';Artist='Luma';Genre='Tech House';MetadataStatus='Dados completos';Destination='2026 - 10 - Outubro\Tech House\125-129 BPM'},
+        [pscustomobject]@{Selected=$true;OutputName='Caio Norte - Afterimage.mp3';Artist='Caio Norte';Genre='House';MetadataStatus='Gênero faltante';Destination='2026 - 10 - Outubro\House\125-129 BPM'}
     )
     $SourceText.Text='C:\Music\Pesquisa Outubro'
     $DestinationText.Text='C:\Music\Pesquisa Outubro\Pesquisa Organizada'
     $ConfigPanel.IsEnabled=$true;$ConfigPanel.Opacity=1
     $PreviewGrid.ItemsSource=$demoOrganize
-    $TotalCount.Text='24';$ReadyCount.Text='21';$NoGenreCount.Text='3';$DuplicateCount.Text='2'
-    $GenreLabel1.Text='HOUSE';$ReadyCount.Text='9';$GenreCounter1.Visibility='Visible'
-    $GenreLabel2.Text='UK GARAGE';$NoGenreCount.Text='6';$GenreCounter2.Visibility='Visible'
-    $GenreLabel3.Text='DEEP HOUSE';$DuplicateCount.Text='4';$GenreCounter3.Visibility='Visible'
+    $TotalCount.Text='24';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
+    $GenreCounter2.Visibility='Collapsed';$GenreCounter3.Visibility='Collapsed'
     $PlanSummary.Text='24 tracks analisadas • 21 prontas • 3 com dados faltantes • nenhuma alteração aplicada'
-    $ModeDateGenre.IsChecked=$true;$FolderPatternText.Text='{AAAA} - {MES}\{GENERO}'
+    $ModeDateGenre.IsChecked=$true;$FolderPatternText.Text='{AAAA} - {MES_NUM} - {MES} - {GENERO}'
     $SendRekordboxCheck.IsChecked=$true;$OrganizerPlaylistNameText.Text='Pesquisa Outubro — Organizado'
     $RekordboxExeText.Text='C:\Program Files\rekordbox\rekordbox.exe'
     $ApplyButton.IsEnabled=$true;$EditTrackMetadataButton.IsEnabled=$true
     $MainTabs.SelectedIndex=1;Update-ContextInformation
-    $TotalCount.Text='24'
-    $GenreLabel1.Text='HOUSE';$ReadyCount.Text='9';$GenreCounter1.Visibility='Visible'
-    $GenreLabel2.Text='UK GARAGE';$NoGenreCount.Text='6';$GenreCounter2.Visibility='Visible'
-    $GenreLabel3.Text='DEEP HOUSE';$DuplicateCount.Text='4';$GenreCounter3.Visibility='Visible'
+    $TotalCount.Text='24';$GenreLabel1.Text='TRACKS COM DADOS FALTANTES';$ReadyCount.Text='3';$GenreCounter1.Visibility='Visible'
+    $GenreCounter2.Visibility='Collapsed';$GenreCounter3.Visibility='Collapsed'
     $StatusText.Text='ORGANIZAR • 24 TRACKS • PLANO PRONTO PARA REVISÃO'
     $OrganizerOptionsScroll.ScrollToVerticalOffset(335)
     Pump-Ui

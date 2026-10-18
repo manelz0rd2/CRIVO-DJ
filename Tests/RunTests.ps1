@@ -29,7 +29,7 @@ try {
     Import-Module (Join-Path $app 'Modules\Inbox.psm1') -Force
     Import-Module (Join-Path $app 'Modules\Downloader.psm1') -Force
     Import-Module (Join-Path $app 'Modules\Rekordbox.psm1') -Force
-    $settings = Get-Content -LiteralPath (Join-Path $app 'Config\settings.json') -Raw | ConvertFrom-Json
+    $settings = Get-Content -LiteralPath (Join-Path $app 'Config\settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Assert-True (Test-Path -LiteralPath (Join-Path $app $settings.Acquisition.DownloaderPath) -PathType Leaf) 'o motor interno de download deve acompanhar o ODT'
     $downloaderCode=Get-Content -LiteralPath (Join-Path $app 'Modules\Downloader.psm1') -Raw
     Assert-True ($downloaderCode.Contains('$arguments.Add((ConvertTo-ProcessArgument "${Quality}K"))') -and -not$downloaderCode.Contains("ConvertTo-ProcessArgument '--postprocessor-args'")) 'MP3 320 deve usar bitrate explícito, sem o modo VBR 0 conflitante'
@@ -118,12 +118,12 @@ try {
     $aliasPlan=New-OrganizationPlan -Tracks @($aliasTrack) -Source (Join-Path $testRoot 'Pesquisa') -Destination (Join-Path $testRoot 'Alias') -Template '{GENERO}' -TreeMode FlattenSource -Settings $settings
     Assert-True ($aliasPlan.Items[0].Destination -match 'UK Garage') 'aliases de gênero devem ser normalizados'
 
-    $missingTrack=$tracks[0].PSObject.Copy();$missingTrack.Genre='_PENDENTE';$missingTrack.MissingGenre=$true;$missingTrack.Bpm=0
+    $missingTrack=$tracks[0].PSObject.Copy();$missingTrack.Genre='Gênero faltante';$missingTrack.MissingGenre=$true;$missingTrack.Bpm=0
     $separatePlan=New-OrganizationPlan -Tracks @($missingTrack) -Source (Join-Path $testRoot 'Pesquisa') -Destination (Join-Path $testRoot 'Ausentes') -Template '{GENERO}\{BPM_RANGE}' -TreeMode FlattenSource -MissingMetadataPolicy Separate -Settings $settings
-    Assert-True ($separatePlan.Items[0].Destination -match '_SEM GENERO') 'metadata ausente deve poder ser separada'
-    Assert-True ($separatePlan.Items[0].Destination -match '_SEM BPM') 'BPM ausente deve usar a pasta prevista'
+    Assert-True ($separatePlan.Items[0].Destination -match 'Gênero faltante') 'gênero ausente deve receber um nome legível'
+    Assert-True ($separatePlan.Items[0].Destination -match 'BPM não analisado') 'BPM sem análise deve receber um nome legível'
     $rootPlan=New-OrganizationPlan -Tracks @($missingTrack) -Source (Join-Path $testRoot 'Pesquisa') -Destination (Join-Path $testRoot 'Raiz') -Template '{GENERO}\{BPM_RANGE}' -TreeMode FlattenSource -MissingMetadataPolicy Root -Settings $settings
-    Assert-True ($rootPlan.Items[0].Destination -notmatch '_(SEM|PENDENTE)') 'metadata ausente deve poder permanecer na raiz organizada'
+    Assert-True ($rootPlan.Items[0].Destination -notmatch '(?i)(faltante|não analisad|_(SEM|PENDENTE))') 'metadata ausente deve poder permanecer na raiz organizada'
     $skipPlan=New-OrganizationPlan -Tracks @($missingTrack) -Source (Join-Path $testRoot 'Pesquisa') -Destination (Join-Path $testRoot 'Pular') -Template '{GENERO}\{BPM_RANGE}' -TreeMode FlattenSource -MissingMetadataPolicy Skip -Settings $settings
     Assert-True ($skipPlan.Items[0].Status -eq 'Skip') 'metadata obrigatória ausente deve poder ser ignorada'
 
@@ -224,6 +224,9 @@ try {
     [IO.Directory]::CreateDirectory($fakeDownload.OutputFolder)|Out-Null
     $fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
     Assert-True ($fakeDownload.Status -eq 'Falhou') 'exit code zero sem arquivo final deve ser tratado como falha'
+    $fakeDownload.Status='Baixando';$fakeDownload|Add-Member NoteProperty FallbackAttempted $true -Force;$fakeDownload|Add-Member NoteProperty OriginalFailure 'Fonte original recusou o áudio' -Force
+    $fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
+    Assert-True ($fakeDownload.Status -eq 'Falhou' -and $fakeDownload.Detail -match 'busca alternativa') 'a falha após fallback deve explicar as duas tentativas ao usuário'
     $downloadedFile=Join-Path $fakeDownload.OutputFolder 'ok.mp3';[IO.File]::WriteAllBytes($downloadedFile,[byte[]](7,7,7))
     [IO.File]::WriteAllText($emptyOut,"ODT_FILE|$downloadedFile")
     $fakeDownload.Status='Baixando';$fakeDownload=Get-ODTDownloadProgress -Download $fakeDownload
@@ -240,10 +243,11 @@ try {
     Assert-True ($resolvedSingle.Count -eq 1 -and $resolvedSingle[0].Title -eq 'Faixa única' -and $fakeResolver.Status -eq 'Expandida') 'um link de track deve gerar exatamente uma linha pronta'
     Assert-True ($resolvedSingle[0].Source -eq 'example.invalid') 'a fonte original deve permanecer estática depois da resolução'
 
-    [IO.File]::WriteAllText($resolverOut,'{"title":"Playlist","entries":[{"title":"Track 1","uploader":"DJ 1","webpage_url":"https://example.invalid/1","thumbnail":"https://example.invalid/1.jpg"},{"title":"Track 2","webpage_url":"https://example.invalid/2","thumbnails":[{"url":"https://example.invalid/2.jpg"}]}]}')
+    [IO.File]::WriteAllText($resolverOut,'{"title":"Playlist","entries":[{"title":"DJ 1 - Track 1","uploader":"DJ 1","webpage_url":"https://example.invalid/1","thumbnail":"https://example.invalid/1.jpg"},{"title":"Track 2","webpage_url":"https://example.invalid/2","thumbnails":[{"url":"https://example.invalid/2.jpg"}]}]}')
     $fakeResolver.Status='Analisando';$fakeResolver.StartedAt=Get-Date;$fakeResolver.FinishedAt=$null
     $resolvedPlaylist=@(Complete-ODTPlaylistResolver -Resolver $fakeResolver)
     Assert-True ($resolvedPlaylist.Count -eq 2 -and $resolvedPlaylist[0].Thumbnail -match '1.jpg' -and $resolvedPlaylist[1].Thumbnail -match '2.jpg') 'uma playlist deve ser separada em tracks com capas individuais'
+    Assert-True ($resolvedPlaylist[0].Title -eq 'Track 1') 'o artista não deve ser repetido no título e no nome final da track'
 
     [IO.File]::WriteAllText($resolverOut,'null');[IO.File]::WriteAllText($resolverErr,'ERROR: a fonte respondeu sem metadata')
     $fakeResolver.Status='Analisando';$fakeResolver.StartedAt=Get-Date;$fakeResolver.FinishedAt=$null

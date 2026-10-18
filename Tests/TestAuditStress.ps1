@@ -20,7 +20,9 @@ function New-TestAudioFile {
 
 function New-LibraryTrack {
     param([string]$Id,[string]$Name,[string]$Artist,[string]$Path,[int]$Bitrate=320,[string]$Genre='House')
-    return [pscustomobject]@{TrackID=$Id;Name=$Name;Artist=$Artist;Album='Album';Genre=$Genre;Year='2026';Bpm=128;Key='8A';Bitrate=$Bitrate;SampleRate=44100;Location=$Path;PlaylistCount=1;PlaylistNames=@('Coleção / Teste fechado');Analysis='DAT, EXT, 2EX'}
+    # PlaylistNames escalar reproduz o formato que o Windows PowerShell 5.1
+    # pode produzir quando a track pertence a exatamente uma playlist.
+    return [pscustomobject]@{TrackID=$Id;Name=$Name;Artist=$Artist;Album='Album';Genre=$Genre;Year='2026';Bpm=128;Key='8A';Bitrate=$Bitrate;SampleRate=44100;Location=$Path;PlaylistCount=1;PlaylistNames='Coleção / Teste fechado';Analysis='DAT, EXT, 2EX'}
 }
 
 try{

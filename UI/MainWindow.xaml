@@ -230,12 +230,11 @@
             </Grid.RowDefinitions>
             <StackPanel>
               <TextBlock Text="BAIXAR TRACKS" FontSize="18" FontWeight="Bold" Foreground="#171613" />
-              <TextBlock Text="Cole ou digite o link no campo, ou arraste-o para a lista de músicas abaixo." Foreground="#57534C" Margin="0,3,0,0" />
-              <TextBlock Text="YouTube, SoundCloud e Spotify  •  tracks individuais ou playlists" Foreground="#34312E" FontSize="10" FontWeight="SemiBold" Margin="0,3,0,0" />
+              <TextBlock Text="YouTube, SoundCloud e Spotify  •  tracks ou playlists  •  cole no campo ou arraste para a lista" Foreground="#171613" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0" />
             </StackPanel>
             <Border Grid.Row="1" Background="#E1DED6" BorderBrush="#171613" BorderThickness="3,1,1,1" Margin="0,10,0,7" Padding="10" x:Name="DownloadDropPanel">
               <StackPanel>
-                <TextBlock Text="COLE OU DIGITE O LINK NO CAMPO — OU ARRASTE PARA A LISTA DE MÚSICAS ABAIXO" Foreground="#171613" FontSize="11" FontWeight="Bold" />
+                <TextBlock Text="LINK DA TRACK OU PLAYLIST" Foreground="#171613" FontSize="11" FontWeight="Bold" />
                 <Grid Margin="0,6,0,0">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition />
@@ -252,7 +251,7 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="150" />
               </Grid.ColumnDefinitions>
-              <TextBlock Text="SALVAR TRACKS EM" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBlock Text="SALVAR TRACKS EM" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" />
               <TextBox x:Name="DownloadDestinationText" Grid.Column="1" IsReadOnly="True" Margin="0,4,8,4" VerticalContentAlignment="Center" />
               <Button x:Name="ChooseDownloadDestinationButton" Grid.Column="2" Content="ESCOLHER PASTA" Margin="0,4,0,4" />
             </Grid>
@@ -264,8 +263,8 @@
                 <ColumnDefinition Width="155" />
                 <ColumnDefinition Width="150" />
               </Grid.ColumnDefinitions>
-              <TextBlock Text="SAÍDA FIXA: MP3 320 KBPS" FontWeight="Bold" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="Os downloads concluídos ficam prontos para organizar." Foreground="#57534C" VerticalAlignment="Center" />
+              <TextBlock Text="SAÍDA FIXA: MP3 320 KBPS" Foreground="#171613" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="Os downloads concluídos ficam prontos para organizar." Foreground="#171613" VerticalAlignment="Center" />
               <Button x:Name="RemoveDownloadButton" Grid.Column="2" Content="REMOVER" Margin="0,4,8,4" ToolTip="Remove as linhas destacadas na lista." />
               <Button x:Name="ClearDownloadsButton" Grid.Column="3" Content="LIMPAR CONCLUÍDOS" Margin="0,4,8,4" />
               <Button x:Name="StartDownloadButton" Grid.Column="4" Content="INICIAR DOWNLOAD" Style="{StaticResource PrimaryButton}" Margin="0,4,0,4" />
@@ -334,8 +333,8 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="210" />
               </Grid.ColumnDefinitions>
-              <TextBlock x:Name="DownloadStatusText" Text="Fila pronta para receber links." Foreground="#45413B" VerticalAlignment="Center" />
-              <Button x:Name="ImportInboxButton" Grid.Column="1" Content="ORGANIZAR CONCLUÍDOS" />
+              <TextBlock x:Name="DownloadStatusText" Text="Lista pronta para receber links." Foreground="#171613" VerticalAlignment="Center" />
+              <Button x:Name="ImportInboxButton" Grid.Column="1" Content="ORGANIZAR CONCLUÍDOS" Style="{StaticResource PrimaryButton}" />
             </Grid>
           </Grid>
         </TabItem>
@@ -371,8 +370,15 @@
                     <StackPanel>
                       <TextBlock Text="02 / COMO FICARÁ A PASTA" Foreground="#171717" FontSize="12" FontWeight="Bold" />
                       <TextBlock Text="Prévia do nome e da estrutura que serão criados." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,9" />
-                      <TextBox x:Name="FolderPatternText" Text="{}{AAAA} - {MES_NUM} - {MES} - {GENERO}" IsReadOnly="True" FontFamily="Segoe UI" />
-                      <CheckBox x:Name="CustomizeFolderCheck" Content="Personalizar nome e estrutura" Margin="0,10,0,0" />
+                      <TextBox x:Name="FolderPatternText" Text="{}{AAAA} - {MES_NUM} - {MES} - {GENERO}" IsReadOnly="True" FontFamily="Segoe UI" ToolTip="Aceita texto livre e opções como gênero, ano e artista." />
+                      <Grid Margin="0,9,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="CustomizeFolderCheck" Content="Personalizar" Margin="0" VerticalAlignment="Center" />
+                        <Button x:Name="TemplateVariablesButton" Grid.Column="1" Content="OPÇÕES DO NOME" Width="108" Height="24" Margin="8,0,0,0" Padding="4,1" FontSize="9" IsEnabled="False" ToolTip="Inserir gênero, ano, artista e outros itens no nome" />
+                      </Grid>
                     </StackPanel>
                   </Border>
                   <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
@@ -398,7 +404,9 @@
                       <TextBlock Text="Opcional. Cria a playlist diretamente com backup e verificação." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,9" />
                       <CheckBox x:Name="SendRekordboxCheck" Content="Gravar playlist diretamente no Rekordbox" ToolTip="O Rekordbox precisa estar totalmente fechado. O CRIVO DJ cria um backup antes de alterar o banco." />
                       <TextBlock Text="Nome da playlist" Foreground="{StaticResource Muted}" FontSize="11" />
-                      <TextBox x:Name="OrganizerPlaylistNameText" Text="CRIVO DJ — Organizado" Margin="0,4,0,0" IsEnabled="False" ToolTip="Preenchido automaticamente com o nome da pasta escolhida; você pode editar antes de organizar." />
+                      <RadioButton x:Name="PlaylistNameFromFolderRadio" Content="Usar nome gerado pela organização" IsChecked="True" IsEnabled="False" FontSize="12" Margin="0,6,0,5" />
+                      <RadioButton x:Name="PlaylistNameCustomRadio" Content="Usar nome personalizado" IsEnabled="False" FontSize="12" Margin="0,0,0,5" />
+                      <TextBox x:Name="OrganizerPlaylistNameText" Text="Organizado" Margin="0,2,0,0" IsEnabled="False" IsReadOnly="True" ToolTip="No modo automático, mostra o nome resultante da organização. Marque nome personalizado para editar." />
                       <TextBlock Text="Executável do Rekordbox" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,9,0,0" />
                       <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
@@ -410,7 +418,7 @@
                       </Grid>
                     </StackPanel>
                   </Border>
-                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+                  <Border Style="{StaticResource Panel}" Margin="0,0,0,10" Visibility="Collapsed">
                     <StackPanel>
                       <TextBlock Text="05 / REGRAS E SEGURANÇA" Foreground="#171717" FontSize="12" FontWeight="Bold" />
                       <TextBlock Text="Proteções conferidas antes de copiar, mover ou renomear qualquer track." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,3,0,10" />
@@ -501,67 +509,71 @@
             </ScrollViewer>
             <Grid Grid.Column="2">
               <Grid.RowDefinitions>
+                <RowDefinition Height="58" />
                 <RowDefinition Height="72" />
                 <RowDefinition Height="58" />
                 <RowDefinition />
                 <RowDefinition Height="68" />
               </Grid.RowDefinitions>
-              <UniformGrid Columns="4">
+              <StackPanel>
+                <TextBlock Text="ORGANIZAR TRACKS" FontSize="18" FontWeight="Bold" Foreground="#171613" />
+                <TextBlock Text="Revise os dados, escolha o destino e confirme antes de alterar qualquer arquivo." Foreground="#45413B" Margin="0,3,0,0" />
+              </StackPanel>
+              <UniformGrid Grid.Row="1" Columns="2">
                 <Border Style="{StaticResource Counter}">
                   <StackPanel>
                     <TextBlock Text="TRACKS AO TODO" Foreground="#404040" FontSize="10" />
                     <TextBlock x:Name="TotalCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
                   </StackPanel>
                 </Border>
-                <Border x:Name="GenreCounter1" Style="{StaticResource Counter}" Visibility="Collapsed">
+                <Border x:Name="GenreCounter1" Style="{StaticResource Counter}" Margin="0">
                   <StackPanel>
-                    <TextBlock x:Name="GenreLabel1" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="GenreLabel1" Text="TRACKS COM DADOS FALTANTES" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="ReadyCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
                   </StackPanel>
                 </Border>
-                <Border x:Name="GenreCounter2" Style="{StaticResource Counter}" Visibility="Collapsed">
-                  <StackPanel>
-                    <TextBlock x:Name="GenreLabel2" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="NoGenreCount" Text="000" Foreground="#4F4B44" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
-                  </StackPanel>
-                </Border>
-                <Border x:Name="GenreCounter3" Style="{StaticResource Counter}" Margin="0" Visibility="Collapsed">
-                  <StackPanel>
-                    <TextBlock x:Name="GenreLabel3" Text="TRACKS POR GÊNERO" Foreground="#404040" FontSize="10" TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="DuplicateCount" Text="000" Foreground="#171613" FontFamily="Arial" FontSize="25" FontWeight="Bold" />
-                  </StackPanel>
-                </Border>
               </UniformGrid>
-              <Grid Grid.Row="1" Margin="0,5,0,6">
+              <StackPanel Visibility="Collapsed">
+                <Border x:Name="GenreCounter2"><StackPanel><TextBlock x:Name="GenreLabel2"/><TextBlock x:Name="NoGenreCount"/></StackPanel></Border>
+                <Border x:Name="GenreCounter3"><StackPanel><TextBlock x:Name="GenreLabel3"/><TextBlock x:Name="DuplicateCount"/></StackPanel></Border>
+              </StackPanel>
+              <Grid Grid.Row="2" Margin="0,5,0,6">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition />
+                  <ColumnDefinition Width="205" />
                   <ColumnDefinition Width="230" />
-                  <ColumnDefinition Width="0" />
-                  <ColumnDefinition Width="180" />
                 </Grid.ColumnDefinitions>
                 <Grid>
                   <Grid.RowDefinitions>
                     <RowDefinition Height="17" />
                     <RowDefinition />
                   </Grid.RowDefinitions>
-                  <TextBlock Text="BUSCAR TRACK" Foreground="#45413B" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="PESQUISAR NA LISTA" Foreground="#45413B" FontSize="9" FontWeight="Bold" />
                   <TextBox x:Name="SearchText" Grid.Row="1" ToolTip="Pesquisar pelo nome ou título da track" />
                 </Grid>
-                <CheckBox x:Name="MetadataMissingCheck" Grid.Column="1" Content="TRACKS COM DADOS FALTANTES" Margin="12,17,0,0" VerticalAlignment="Center" ToolTip="Mostrar somente tracks com título, artista, álbum, gênero, ano, BPM ou tonalidade ausentes" />
-                <Button x:Name="EnrichMetadataButton" Grid.Column="3" Content="BUSCAR DADOS AUSENTES" Height="34" Padding="6,2" Margin="7,17,0,0" FontSize="10" ToolTip="Procura título, artista, álbum, gênero e ano que estiverem vazios. Você revisa antes de aplicar; os arquivos não são alterados automaticamente." />
+                <Grid Grid.Column="1" Margin="8,0,0,0">
+                  <Grid.RowDefinitions><RowDefinition Height="17"/><RowDefinition/></Grid.RowDefinitions>
+                  <TextBlock Text="MOSTRAR" Foreground="#45413B" FontSize="9" FontWeight="Bold" />
+                  <ComboBox x:Name="OrganizerListFilterCombo" Grid.Row="1">
+                    <ComboBoxItem Content="Todas as tracks" Tag="All" IsSelected="True" />
+                    <ComboBoxItem Content="Tracks com dados faltantes" Tag="Missing" />
+                  </ComboBox>
+                </Grid>
+                <Button x:Name="EnrichMetadataButton" Grid.Column="2" Content="BUSCAR DADOS AUSENTES AUTOMATICAMENTE" Style="{StaticResource PrimaryButton}" Height="34" Padding="6,2" Margin="7,17,0,0" FontSize="9" ToolTip="Tenta completar os dados online. Se não encontrar, selecione a track na lista e use Editar dados faltantes." />
               </Grid>
-              <Border Grid.Row="2" CornerRadius="1" BorderBrush="#777269" BorderThickness="1" Background="#D0CCC3" Padding="1">
+              <Border Grid.Row="3" CornerRadius="1" BorderBrush="#777269" BorderThickness="1" Background="#D0CCC3" Padding="1">
                 <DataGrid x:Name="PreviewGrid" IsReadOnly="False" AlternationCount="2" BorderThickness="0">
                   <DataGrid.Columns>
                     <DataGridCheckBoxColumn Header="✓" Binding="{Binding Selected}" Width="38" />
                     <DataGridTextColumn Header="NOME FINAL" Binding="{Binding OutputName}" Width="1.25*" />
                     <DataGridTextColumn Header="ARTISTA" Binding="{Binding Artist}" Width="*" />
                     <DataGridTextColumn Header="GÊNERO" Binding="{Binding Genre}" Width="*" />
+                    <DataGridTextColumn Header="DADOS" Binding="{Binding MetadataStatus}" Width="1.5*" IsReadOnly="True" />
                     <DataGridTextColumn Header="DESTINO" Binding="{Binding Destination}" Width="2.1*" />
                   </DataGrid.Columns>
                 </DataGrid>
               </Border>
-              <Grid Grid.Row="3" Margin="0,10,0,0">
+              <Grid Grid.Row="4" Margin="0,10,0,0">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition />
                   <ColumnDefinition Width="180" />

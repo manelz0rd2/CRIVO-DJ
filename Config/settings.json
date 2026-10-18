@@ -27,14 +27,14 @@
     "GenreFallbackPriority":  [
                                   "Metadata",
                                   "SourceFolder",
-                                  "_PENDENTE"
+                                  "MissingGenre"
                               ],
     "UnknownValues":  {
-                          "Genre":  "_SEM GENERO",
-                          "Date":  "_SEM DATA",
-                          "Bpm":  "_SEM BPM",
-                          "Artist":  "_SEM ARTISTA",
-                          "Key":  "_SEM TONALIDADE"
+                          "Genre":  "Gênero faltante",
+                          "Date":  "Data faltante",
+                          "Bpm":  "BPM não analisado",
+                          "Artist":  "Artista faltante",
+                          "Key":  "Tonalidade não analisada"
                       },
     "GenreAliases":  {
                          "UKG":  "UK Garage",
