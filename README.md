@@ -22,7 +22,7 @@ O CRIVO DJ concentra o fluxo de pesquisa musical em um aplicativo portátil para
 
 ## Download para Windows
 
-[**Baixar CRIVO DJ v0.9.9 para Windows**](https://github.com/manelz0rd2/CRIVO-DJ/releases/download/v0.9.9/CRIVO-DJ-v0.9.9-Windows-Kit-USB.zip)
+[**Baixar CRIVO DJ v0.9.9 para Windows**](https://github.com/manelz0rd2/CRIVO-DJ/releases/download/v0.9.9/CRIVO-DJ-v0.9.9-Windows.zip)
 
 Extraia o ZIP inteiro e abra `CRIVO DJ.exe`. O aplicativo não possui instalador e não exige privilégios de administrador para o uso comum. Não execute o programa de dentro do ZIP, pois as ferramentas incluídas precisam permanecer juntas na pasta extraída.
 
