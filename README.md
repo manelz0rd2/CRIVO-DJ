@@ -88,9 +88,11 @@ Cria uma cópia dos arquivos e da estrutura encontrada em outro local antes de q
 
 ### Recuperação
 
-Monta uma cópia recuperada em outro diretório a partir do que ainda pode ser lido. O CRIVO apresenta um plano antes de começar e deixa claro que arquivos danificados ou ausentes podem não ser recuperados.
+Monta uma cópia recuperada em outro diretório a partir do que ainda pode ser lido. Cada playlist confirmada recebe uma pasta própria com seus áudios e um arquivo `.m3u8` que preserva a ordem. Tracks presentes em várias playlists são copiadas para cada pasta, por isso o CRIVO confere o espaço livre antes de começar. O plano é exibido para revisão e deixa claro que arquivos danificados ou ausentes podem não ser recuperados.
 
 ![Recuperação de um pendrive com falhas](docs/screenshots/06-kit-usb-recuperacao.png)
+
+![Revisão preenchida antes de criar a cópia recuperada](docs/screenshots/06a-revisar-recuperacao.png)
 
 ### Compatibilidade
 

@@ -1372,35 +1372,39 @@ O dispositivo original não foi alterado.
 }
 
 function Show-ToolkitRecoveryReview {
-    if(-not$script:UsbHealthReport){Show-Message 'Verifique o dispositivo antes de revisar a recuperação.' 'Recuperação';return}
+    param([AllowNull()][object]$DemoPlan,[string]$CapturePath='')
     $source=[string]$ToolkitUsbPathText.Text
-    $database=Join-Path $source 'PIONEER\rekordbox\EXPORT.PDB'
-    if(-not(Test-Path -LiteralPath $database -PathType Leaf)){
-        Show-Message 'A biblioteca antiga do Rekordbox não foi encontrada neste dispositivo. Nenhuma recuperação foi iniciada.' 'Recuperação não disponível'
-        return
+    if($DemoPlan){
+        $plan=$DemoPlan
+    }else{
+        if(-not$script:UsbHealthReport){Show-Message 'Verifique o dispositivo antes de revisar a recuperação.' 'Recuperação';return}
+        $database=Join-Path $source 'PIONEER\rekordbox\EXPORT.PDB'
+        if(-not(Test-Path -LiteralPath $database -PathType Leaf)){
+            Show-Message 'A biblioteca antiga do Rekordbox não foi encontrada neste dispositivo. Nenhuma recuperação foi iniciada.' 'Recuperação não disponível'
+            return
+        }
+        try{
+            $ToolkitFirstAidButton.IsEnabled=$false
+            Set-Status 'KIT DE FERRAMENTAS USB • LENDO O QUE AINDA PODE SER RECUPERADO' 0
+            $workingDirectory=Join-Path (Get-AppDataRoot) 'Planos de recuperacao'
+            $script:UsbRecoveryPlan=New-CrivoUsbRecoveryPlan -SourceRoot $source -WorkingDirectory $workingDirectory -OnWait {Pump-Ui}
+        }catch{
+            Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+            Show-Message ($_.Exception.Message+"`n`nNenhum arquivo foi criado e o dispositivo original não foi alterado.") 'Não foi possível revisar a recuperação' Error
+            return
+        }finally{
+            $ToolkitFirstAidButton.IsEnabled=$true
+        }
+        $plan=$script:UsbRecoveryPlan.Plan
     }
-    try{
-        $ToolkitFirstAidButton.IsEnabled=$false
-        Set-Status 'KIT DE FERRAMENTAS USB • LENDO O QUE AINDA PODE SER RECUPERADO' 0
-        $workingDirectory=Join-Path (Get-AppDataRoot) 'Planos de recuperacao'
-        $script:UsbRecoveryPlan=New-CrivoUsbRecoveryPlan -SourceRoot $source -WorkingDirectory $workingDirectory -OnWait {Pump-Ui}
-    }catch{
-        Write-AppLog -Message $_.Exception.ToString() -Level ERROR
-        Show-Message ($_.Exception.Message+"`n`nNenhum arquivo foi criado e o dispositivo original não foi alterado.") 'Não foi possível revisar a recuperação' Error
-        return
-    }finally{
-        $ToolkitFirstAidButton.IsEnabled=$true
-    }
-
-    $plan=$script:UsbRecoveryPlan.Plan
     $rows=@($plan.playlists|ForEach-Object{[pscustomobject]@{Playlist=[string]$_.path;Resultado=([string]$_.status).ToUpperInvariant();Confirmadas=[int]$_.resolved_entries;NaoConfirmadas=[int]$_.unresolved_entries}})
     $dialog=New-Object Windows.Window
-    $dialog.Title='CRIVO DJ — Revisar recuperação';$dialog.Width=940;$dialog.Height=680;$dialog.MinWidth=820;$dialog.MinHeight=600
+    $dialog.Title='CRIVO DJ — Revisar recuperação';$dialog.Width=940;$dialog.Height=730;$dialog.MinWidth=820;$dialog.MinHeight=650
     $dialog.WindowStartupLocation='CenterOwner';$dialog.ResizeMode='CanResizeWithGrip';$dialog.WindowStyle='None';$dialog.ShowInTaskbar=$false
     $dialog.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#B4B0A8');$dialog.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$dialog.FontFamily='Segoe UI'
     if($window -and $window.IsLoaded){$dialog.Owner=$window};if($window.Icon){$dialog.Icon=$window.Icon}
     $shell=New-Object Windows.Controls.Border;$shell.BorderBrush=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$shell.BorderThickness='1'
-    $layout=New-Object Windows.Controls.Grid
+    $layout=New-Object Windows.Controls.Grid;$layout.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#B4B0A8')
     foreach($height in @('Auto','Auto','Auto','*','Auto','Auto')){$definition=New-Object Windows.Controls.RowDefinition;$definition.Height=$height;$layout.RowDefinitions.Add($definition)}
     $header=New-Object Windows.Controls.Border;$header.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$header.Padding='18,13'
     $headerText=New-Object Windows.Controls.TextBlock;$headerText.Text='REVISAR RECUPERAÇÃO';$headerText.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F0EA');$headerText.FontWeight='Bold';$headerText.FontSize=14;$header.Child=$headerText;$header.Add_MouseLeftButtonDown({try{$dialog.DragMove()}catch{}});$layout.Children.Add($header)|Out-Null
@@ -1412,9 +1416,12 @@ function Show-ToolkitRecoveryReview {
     [Windows.Controls.Grid]::SetRow($grid,3);$layout.Children.Add($grid)|Out-Null
     $options=New-Object Windows.Controls.StackPanel;$options.Margin='18,0,18,8'
     $warning=New-Object Windows.Controls.TextBlock;$warning.Text='A recuperação pode ficar incompleta. O CRIVO recupera somente as informações que consegue confirmar. Dados danificados podem resultar em tracks ausentes, playlists incompletas ou ordem diferente da original. O dispositivo original não será alterado.';$warning.TextWrapping='Wrap';$warning.FontWeight='SemiBold';$warning.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#6F4700');$warning.Margin='0,0,0,10';$options.Children.Add($warning)|Out-Null
+    $organizationHint=New-Object Windows.Controls.TextBlock;$organizationHint.Text='Cada playlist confirmada ganhará uma pasta própria dentro de “Playlists”, com seus áudios e um arquivo que preserva a ordem. Tracks presentes em mais de uma playlist serão copiadas para cada pasta e podem aumentar o espaço usado.';$organizationHint.TextWrapping='Wrap';$organizationHint.Margin='0,0,0,10';$organizationHint.FontSize=12;$options.Children.Add($organizationHint)|Out-Null
     $destinationRow=New-Object Windows.Controls.Grid;$destinationRow.ColumnDefinitions.Add((New-Object Windows.Controls.ColumnDefinition));$buttonColumn=New-Object Windows.Controls.ColumnDefinition;$buttonColumn.Width='190';$destinationRow.ColumnDefinitions.Add($buttonColumn)
-    $destinationText=New-Object Windows.Controls.TextBox;$destinationText.IsReadOnly=$true;$destinationText.Height=34;$destinationText.VerticalContentAlignment='Center';$destinationText.Text='Escolha onde salvar a cópia recuperada';$destinationText.Padding='8,0';$destinationRow.Children.Add($destinationText)|Out-Null
+    $destinationText=New-Object Windows.Controls.TextBox;$destinationText.IsReadOnly=$true;$destinationText.Height=34;$destinationText.VerticalContentAlignment='Center';$destinationText.Text=$(if($DemoPlan){'C:\Music\CRIVO DJ\Cópia recuperada'}else{'Escolha onde salvar a cópia recuperada'});$destinationText.Padding='8,0';$destinationRow.Children.Add($destinationText)|Out-Null
     $choose=New-Object Windows.Controls.Button;$choose.Content='ESCOLHER ONDE SALVAR';$choose.Height=34;$choose.Margin='8,0,0,0';$choose.Add_Click({$selected=Select-Folder 'Escolha onde salvar a cópia recuperada' '';if($selected){$destinationText.Text=$selected}});[Windows.Controls.Grid]::SetColumn($choose,1);$destinationRow.Children.Add($choose)|Out-Null;$options.Children.Add($destinationRow)|Out-Null
+    $recoveryProgressText=New-Object Windows.Controls.TextBlock;$recoveryProgressText.Text=$(if($DemoPlan){'Pronto para criar a cópia recuperada'}else{'Aguardando a escolha do destino'});$recoveryProgressText.Margin='0,10,0,4';$recoveryProgressText.FontSize=11;$recoveryProgressText.FontWeight='SemiBold';$options.Children.Add($recoveryProgressText)|Out-Null
+    $recoveryProgress=New-Object Windows.Controls.ProgressBar;$recoveryProgress.Height=14;$recoveryProgress.Minimum=0;$recoveryProgress.Maximum=100;$recoveryProgress.Value=0;$recoveryProgress.Background=[Windows.Media.BrushConverter]::new().ConvertFromString('#D8D5CE');$recoveryProgress.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#171613');$options.Children.Add($recoveryProgress)|Out-Null
     [Windows.Controls.Grid]::SetRow($options,4);$layout.Children.Add($options)|Out-Null
     $footer=New-Object Windows.Controls.StackPanel;$footer.Orientation='Horizontal';$footer.HorizontalAlignment='Right';$footer.Margin='18,2,18,15'
     $back=New-Object Windows.Controls.Button;$back.Content='VOLTAR';$back.MinWidth=115;$back.Height=38;$back.Margin='0,0,8,0';$back.Add_Click({$dialog.Close()});$footer.Children.Add($back)|Out-Null
@@ -1424,22 +1431,36 @@ function Show-ToolkitRecoveryReview {
         if(-not(Test-Path -LiteralPath $destination -PathType Container)){Show-Message 'Escolha uma pasta válida fora do dispositivo original.' 'Onde salvar';return}
         $sourceFull=[IO.Path]::GetFullPath($source).TrimEnd('\')+'\';$destinationFull=[IO.Path]::GetFullPath($destination).TrimEnd('\')+'\'
         if($destinationFull.StartsWith($sourceFull,[StringComparison]::OrdinalIgnoreCase)){Show-Message 'Escolha um destino fora do dispositivo original.' 'Destino inseguro';return}
-        $confirmed=Show-CrivoConfirm -Message "A recuperação pode ficar incompleta. Tracks ausentes, playlists incompletas ou ordem diferente podem permanecer quando os dados de origem estão danificados.`n`nO CRIVO criará e validará uma nova cópia. O dispositivo original não será alterado." -Title 'Criar cópia recuperada' -ConfirmText 'CRIAR CÓPIA RECUPERADA' -CancelText 'VOLTAR E REVISAR'
+        $confirmed=Show-CrivoConfirm -Message "A recuperação pode ficar incompleta. Tracks ausentes, playlists incompletas ou ordem diferente podem permanecer quando os dados de origem estão danificados.`n`nCada playlist confirmada terá uma pasta com cópias dos seus áudios. Tracks presentes em várias playlists ocuparão espaço em cada pasta.`n`nO CRIVO criará e validará uma nova cópia. O dispositivo original não será alterado." -Title 'Criar cópia recuperada' -ConfirmText 'CRIAR CÓPIA RECUPERADA' -CancelText 'VOLTAR E REVISAR'
         if(-not$confirmed){return}
         try{
             $create.IsEnabled=$false;$choose.IsEnabled=$false;$back.IsEnabled=$false
+            $recoveryProgressText.Text='Criando a cópia e conferindo os arquivos…';$recoveryProgress.IsIndeterminate=$true;Pump-Ui
             Set-Status 'KIT DE FERRAMENTAS USB • CRIANDO E VALIDANDO A CÓPIA RECUPERADA' 10
             $result=Invoke-CrivoUsbRecoveryCopy -PlanPath $script:UsbRecoveryPlan.PlanPath -DestinationRoot $destination -OnWait {Pump-Ui}
+            $recoveryProgress.IsIndeterminate=$false;$recoveryProgress.Value=100;$recoveryProgressText.Text='Cópia recuperada criada e conferida';Pump-Ui
             Set-Status 'KIT DE FERRAMENTAS USB • CÓPIA RECUPERADA VALIDADA' 100
             $dialog.Close();Show-CrivoRecoveryCompletion -Result $result
         }catch{
             Write-AppLog -Message $_.Exception.ToString() -Level ERROR
+            $recoveryProgress.IsIndeterminate=$false;$recoveryProgress.Value=0;$recoveryProgressText.Text='A recuperação não foi concluída';Pump-Ui
             Show-Message ($_.Exception.Message+"`n`nA origem não foi alterada. Não use uma cópia que não tenha sido validada pelo CRIVO.") 'A cópia recuperada não foi concluída' Error
             $create.IsEnabled=$true;$choose.IsEnabled=$true;$back.IsEnabled=$true
         }
     });$footer.Children.Add($create)|Out-Null
     [Windows.Controls.Grid]::SetRow($footer,5);$layout.Children.Add($footer)|Out-Null
-    $shell.Child=$layout;$dialog.Content=$shell;[void]$dialog.ShowDialog()
+    $shell.Child=$layout;$dialog.Content=$shell
+    if($CapturePath){
+        $dialog.Add_ContentRendered({
+            $dialog.UpdateLayout();$visual=$dialog.Content
+            $width=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualWidth));$height=[Math]::Max(1,[int][Math]::Ceiling($visual.ActualHeight))
+            $bitmap=New-Object Windows.Media.Imaging.RenderTargetBitmap($width,$height,96,96,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($visual)
+            $encoder=New-Object Windows.Media.Imaging.PngBitmapEncoder;$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+            $stream=[IO.File]::Open($CapturePath,[IO.FileMode]::Create);try{$encoder.Save($stream)}finally{$stream.Dispose()}
+            $dialog.Close()
+        })
+    }
+    [void]$dialog.ShowDialog()
 }
 
 function Export-ToolkitUsbHealth {
@@ -2071,6 +2092,24 @@ if($MarketingScreenshots){
     $ToolkitSubTabs.SelectedIndex=2
     $StatusText.Text='KIT USB • RECUPERAÇÃO EM OUTRO LOCAL • REVISÃO DISPONÍVEL'
     Save-MarketingScreenshot '06-kit-usb-recuperacao.png'
+    $demoRecoveryPlan=[pscustomobject]@{
+        physical_audio_count=728;playlists_recoverable=8;playlists_partial=3;playlists_unconfirmed=1
+        playlists=@(
+            [pscustomobject]@{path='Warm Up';status='Recuperável';resolved_entries=48;unresolved_entries=0},
+            [pscustomobject]@{path='Sunset Session';status='Recuperável';resolved_entries=62;unresolved_entries=0},
+            [pscustomobject]@{path='Peak Time';status='Recuperação parcial';resolved_entries=71;unresolved_entries=3},
+            [pscustomobject]@{path='After Hours';status='Recuperável';resolved_entries=55;unresolved_entries=0},
+            [pscustomobject]@{path='UK Garage';status='Recuperável';resolved_entries=64;unresolved_entries=0},
+            [pscustomobject]@{path='Minimal House';status='Recuperação parcial';resolved_entries=58;unresolved_entries=2},
+            [pscustomobject]@{path='Vocals';status='Recuperável';resolved_entries=46;unresolved_entries=0},
+            [pscustomobject]@{path='New Finds';status='Recuperável';resolved_entries=83;unresolved_entries=0},
+            [pscustomobject]@{path='Classics';status='Recuperável';resolved_entries=69;unresolved_entries=0},
+            [pscustomobject]@{path='Closing';status='Recuperação parcial';resolved_entries=39;unresolved_entries=1},
+            [pscustomobject]@{path='Favorites';status='Recuperável';resolved_entries=77;unresolved_entries=0},
+            [pscustomobject]@{path='Arquivo antigo';status='Não foi possível confirmar';resolved_entries=0;unresolved_entries=14}
+        )
+    }
+    Show-ToolkitRecoveryReview -DemoPlan $demoRecoveryPlan -CapturePath (Join-Path $MarketingOutput '06a-revisar-recuperacao.png')
 
     $demoCompatibility=@(
         [pscustomobject]@{Name='Sistema de arquivos';Level='Compatível';Summary='FAT32';Detail='Dentro do formato documentado'},

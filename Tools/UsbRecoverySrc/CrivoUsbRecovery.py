@@ -283,6 +283,14 @@ def write_m3u(path, entries, recovery_root, copied_by_source):
     path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
 
 
+def write_local_m3u(path, copied_entries):
+    lines = ["#EXTM3U"]
+    for entry in copied_entries:
+        title = entry.get("title") or Path(entry["path"]).stem
+        lines.extend([f"#EXTINF:-1,{title}", Path(entry["path"]).name])
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+
+
 def write_recovery_report(path, result):
     playlist_rows = []
     for item in result["playlists"]:
@@ -294,7 +302,7 @@ def write_recovery_report(path, result):
     document = f"""<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><title>CRIVO DJ — Cópia recuperada</title>
 <style>body{{margin:0;background:#b8b4ac;color:#171613;font-family:Arial,sans-serif}}main{{max-width:1050px;margin:28px auto}}header{{background:#111214;color:white;padding:20px}}section{{background:#d0ccc3;border:1px solid #777269;padding:18px;margin-top:14px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:9px;border-bottom:1px solid #aaa59c;text-align:left}}th{{background:#a7a299}}span{{padding:4px 7px;font-weight:bold}}.ok{{background:#485c43;color:white}}.attention{{background:#b67b09;color:white}}.unknown{{background:#69655e;color:white}}</style></head>
 <body><main><header><b>CRIVO DJ</b> — Relatório da cópia recuperada</header><section><h1>Cópia recuperada criada</h1>
-<p>O dispositivo original não foi alterado.</p><ul><li>Cópia de segurança: {'validada' if result['backup_validated'] else 'não validada'}</li><li>{result['copied_file_count']} arquivos preservados</li><li>{result['copied_audio_count']} arquivos de áudio preservados</li><li>{result['created_playlist_count']} playlists criadas</li><li>{result['confirmed_link_count']} posições de tracks recuperadas</li><li>{result['unresolved_link_count']} posições não puderam ser recuperadas</li></ul>
+<p>O dispositivo original não foi alterado.</p><ul><li>Cópia de segurança: {'validada' if result['backup_validated'] else 'não validada'}</li><li>{result['copied_file_count']} arquivos preservados</li><li>{result['copied_audio_count']} arquivos de áudio preservados</li><li>{result['created_playlist_count']} pastas de playlists criadas</li><li>{result.get('playlist_audio_copy_count', 0)} cópias de áudio organizadas nas playlists</li><li>{result['confirmed_link_count']} posições de tracks recuperadas</li><li>{result['unresolved_link_count']} posições não puderam ser recuperadas</li></ul>
 <p><b>A recuperação pode ficar incompleta.</b> O CRIVO incluiu somente informações que conseguiu confirmar.</p></section><section><h2>Playlists</h2><table><thead><tr><th>PLAYLIST</th><th>RESULTADO</th><th>RECUPERADAS</th><th>NÃO CONFIRMADAS</th></tr></thead><tbody>{''.join(playlist_rows)}</tbody></table></section></main></body></html>"""
     path.write_text(document, encoding="utf-8")
 
@@ -309,6 +317,26 @@ def recover(payload):
     source_root = Path(plan["source_root"]).resolve()
     if not source_root.is_dir():
         raise FileNotFoundError(f"A cópia validada não está disponível: {source_root}")
+
+    sizes_by_source = {str(item["path"]): int(item.get("size", 0)) for item in plan["source_files"]}
+    playlist_copy_bytes_planned = sum(
+        sizes_by_source.get(str(entry.get("source_path")), 0)
+        for playlist in plan["playlists"]
+        for entry in playlist["entries"]
+        if entry.get("resolved") and entry.get("source_path")
+    )
+    required_bytes = int(plan.get("source_byte_count", 0)) + playlist_copy_bytes_planned
+    try:
+        free_bytes = shutil.disk_usage(destination_parent).free
+        if free_bytes < required_bytes:
+            required_gb = required_bytes / (1024 ** 3)
+            free_gb = free_bytes / (1024 ** 3)
+            raise ValueError(
+                f"Não há espaço suficiente no destino. A recuperação precisa de aproximadamente "
+                f"{required_gb:.1f} GB e há {free_gb:.1f} GB livres."
+            )
+    except OSError:
+        pass
     try:
         if os.path.commonpath([str(source_root), str(destination_parent)]) == str(source_root):
             raise ValueError("Escolha um destino fora da cópia usada como origem.")
@@ -368,21 +396,42 @@ def recover(payload):
         and all(item["match"] for item in critical_hashes)
     )
 
-    used_names = set()
+    used_directories = set()
     playlist_results = []
     created_playlist_count = 0
+    playlist_audio_copy_count = 0
+    playlist_audio_copy_bytes = 0
+    playlist_copy_errors = []
     for playlist in plan["playlists"]:
-        base = safe_name(playlist["path"].replace(" / ", " - "), f"Playlist {playlist['playlist_id']}")
-        name = base
+        raw_parts = [part for part in str(playlist["path"]).split(" / ") if part.strip()]
+        parts = [safe_name(part, "Pasta") for part in raw_parts] or [f"Playlist {playlist['playlist_id']}"]
+        base = playlists_root.joinpath(*parts)
+        playlist_directory = base
         counter = 2
-        while name.lower() in used_names:
-            name = f"{base} ({counter})"
+        while str(playlist_directory).lower() in used_directories or playlist_directory.exists():
+            playlist_directory = base.with_name(f"{base.name} ({counter})")
             counter += 1
-        used_names.add(name.lower())
+        used_directories.add(str(playlist_directory).lower())
         resolved_entries = [entry for entry in playlist["entries"] if entry["resolved"] and entry.get("source_path") in copied_by_source]
+        copied_entries = []
         if resolved_entries:
-            write_m3u(playlists_root / f"{name}.m3u8", resolved_entries, recovery_root, copied_by_source)
-            created_playlist_count += 1
+            playlist_directory.mkdir(parents=True, exist_ok=False)
+            for sequence, entry in enumerate(resolved_entries, start=1):
+                preserved = Path(copied_by_source[entry["source_path"]])
+                stem = safe_name(preserved.stem, f"Track {sequence}")
+                target = playlist_directory / f"{sequence:03d} - {stem}{preserved.suffix}"
+                try:
+                    shutil.copy2(preserved, target)
+                    playlist_audio_copy_count += 1
+                    playlist_audio_copy_bytes += target.stat().st_size
+                    copied_entries.append({"title": entry.get("title"), "path": str(target)})
+                except Exception as exc:
+                    playlist_copy_errors.append({
+                        "playlist": playlist["path"], "source": str(preserved), "error": str(exc)
+                    })
+            if copied_entries:
+                write_local_m3u(playlist_directory / f"{safe_name(parts[-1], 'Playlist')}.m3u8", copied_entries)
+                created_playlist_count += 1
         playlist_results.append({
             "name": playlist["path"],
             "status": playlist["status"],
@@ -391,7 +440,7 @@ def recover(payload):
         })
 
     result = {
-        "success": backup_validated,
+        "success": backup_validated and not playlist_copy_errors,
         "operation": "recover",
         "created_at": datetime.now().astimezone().isoformat(),
         "recovery_root": str(recovery_root),
@@ -404,6 +453,10 @@ def recover(payload):
         "copy_errors": copy_errors,
         "critical_hashes": critical_hashes,
         "created_playlist_count": created_playlist_count,
+        "playlist_audio_copy_count": playlist_audio_copy_count,
+        "playlist_audio_copy_byte_count": playlist_audio_copy_bytes,
+        "playlist_copy_error_count": len(playlist_copy_errors),
+        "playlist_copy_errors": playlist_copy_errors,
         "confirmed_link_count": plan["confirmed_link_count"],
         "unresolved_link_count": plan["unresolved_link_count"],
         "playlists": playlist_results,

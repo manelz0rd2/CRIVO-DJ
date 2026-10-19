@@ -35,7 +35,12 @@ try{
     $copied=Join-Path ([string]$result.recovery_root) 'Original preservado\Conteudo\Música de teste.mp3'
     if(-not(Test-Path -LiteralPath $copied -PathType Leaf)){throw 'O áudio não foi preservado na cópia.'}
     if((Get-FileHash -LiteralPath $copied -Algorithm SHA256).Hash -ne $sourceHash){throw 'O conteúdo do áudio copiado é diferente da origem.'}
-    $playlist=@(Get-ChildItem (Join-Path ([string]$result.recovery_root) 'Playlists') -Filter '*.m3u8' -File)
+    $playlistFolder=Join-Path ([string]$result.recovery_root) 'Playlists\Seleção de teste'
+    if(-not(Test-Path -LiteralPath $playlistFolder -PathType Container)){throw 'A pasta própria da playlist não foi criada.'}
+    $playlistAudio=@(Get-ChildItem -LiteralPath $playlistFolder -File|Where-Object{$_.Extension -eq '.mp3'})
+    if($playlistAudio.Count -ne 1 -or $playlistAudio[0].Name -notlike '001 - *'){throw 'O áudio não foi organizado dentro da pasta da playlist.'}
+    if((Get-FileHash -LiteralPath $playlistAudio[0].FullName -Algorithm SHA256).Hash -ne $sourceHash){throw 'O áudio da pasta da playlist é diferente da origem.'}
+    $playlist=@(Get-ChildItem -LiteralPath $playlistFolder -Filter '*.m3u8' -File)
     if($playlist.Count -ne 1){throw 'A playlist recuperada não foi criada.'}
     $targetLine=@([IO.File]::ReadAllLines($playlist[0].FullName,[Text.Encoding]::UTF8)|Where-Object{$_ -and -not$_.StartsWith('#')})
     if($targetLine.Count -ne 1 -or -not(Test-Path -LiteralPath ([IO.Path]::GetFullPath((Join-Path $playlist[0].DirectoryName ($targetLine[0] -replace '/','\')))) -PathType Leaf)){throw 'A playlist recuperada aponta para um arquivo inexistente.'}
